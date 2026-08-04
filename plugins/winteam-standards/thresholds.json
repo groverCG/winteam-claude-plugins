@@ -1,0 +1,39 @@
+{
+  "_comment": "Single source of truth for the winteam-standards size caps. Edited by hand; read by hooks/check_cs_edit.py and applied by /winteam-standards:size-report. The keeping-files-small and keeping-core-methods-small skills restate these values for readability and both say explicitly that this file wins on conflict. If the hook cannot read this file it falls back to the same values hardcoded in the script, so a typo here degrades to defaults rather than breaking the hook.",
+
+  "fileCaps": {
+    "WinTeam.Mobile.Core/": 250,
+    "WinTeam.Mobile.iOS/": 350,
+    "WinTeam.Mobile.Android/": 450
+  },
+
+  "maxBodyLines": 15,
+  "maxParams": 3,
+
+  "_maxBodyLinesComment": "Target is 10 lines; 15 is where the advisory fires. Method limits apply only under WinTeam.Mobile.Core/ — platform view methods are exempt by design.",
+
+  "lengthCarveOuts": [
+    "DoBind",
+    "RegisterInjections",
+    "FinishedLaunching",
+    "BuckleUp"
+  ],
+
+  "_lengthCarveOutsComment": "Exempt from the body-length check only. Their parameter counts are still checked. An explicit [] means no carve-outs and is honoured as written; only a non-list value falls back to the four defaults hardcoded in the hook.",
+
+  "entityPairCarveOuts": [
+    "ErrorResponse",
+    "UploadPhotoResponse",
+    "TimeClockPunchResponse",
+    "CallLogResponse",
+    "CustomerBrandingResponse",
+    "UserSettingsResponse",
+    "KioskProfileLastContactResponse",
+    "BiometricsConsentSubmissionResponse",
+    "TeamTimeMessageSubmissionResponse",
+    "CheckpointCreateResponse",
+    "CheckpointDetailsUpdateResponse"
+  ],
+
+  "_entityPairCarveOutsComment": "Responses that legitimately have no *Entity sibling: write-results and acks. Nothing persists an ack, so there is nothing to cache. Read by the entity-pair checks in hooks/check_cs_edit.py, which would otherwise fire on all nine of these and get the hook muted. A Manager returning one of these directly is the one sanctioned exception to 'no Response above the Manager'. Same [] semantics as lengthCarveOuts."
+}

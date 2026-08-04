@@ -1,0 +1,17 @@
+{
+  "name": "timeclock-refactor",
+  "description": "Conventions extracted from the WinTeam TimeClockViewModel refactor: choosing an inter-component communication channel, extracting a child view model or an orchestrator pipeline, moving a bound property, retiring an orphan message, and pairing a change with its kiosk variant. Includes a behaviour-parity auditor for verifying an extraction against the merge base with dev. Targets the MOB-13653 branch \u2014 the architecture these skills describe is not on master.",
+  "version": "1.10.0",
+  "author": {
+    "name": "Grover Choque",
+    "email": "grover.choque@workwave.com"
+  },
+  "keywords": [
+    "winteam",
+    "timeclock",
+    "refactoring",
+    "mvvm",
+    "messaging",
+    "kiosk"
+  ]
+}
