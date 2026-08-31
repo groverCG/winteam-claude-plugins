@@ -3,6 +3,10 @@ name: keeping-core-methods-small
 description: >-
   Use when writing or extending a method, constructor, or interface declaration in WinTeam.Mobile.Core, or
   when a parameter list reaches four. Method bodies and parameters, not whole-file length.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Keep a business-logic method to one job

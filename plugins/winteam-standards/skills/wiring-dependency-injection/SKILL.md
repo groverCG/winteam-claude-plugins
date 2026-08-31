@@ -3,6 +3,10 @@ name: wiring-dependency-injection
 description: >-
   Use when a class in WinTeam.Mobile.Core needs a manager or service, when writing [Inject], BuildUp( or
   TinyIoCContainer.Current, or when adding a registration to Bootstrap.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Inject dependencies as properties, and resolve nothing yourself

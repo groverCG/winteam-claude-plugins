@@ -3,6 +3,10 @@ name: declaring-properties-and-commands
 description: >-
   Use when adding a bindable property or command to a ViewModel in WinTeam.Mobile.Core — [ObservableProperty],
   SetProperty(ref, [RelayCommand] — or making a view react to a value changing.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Declare bindable members with the source generators

@@ -46,6 +46,7 @@ ENTITY_PAIR_CARVE_OUTS = {
     "ErrorResponse", "UploadPhotoResponse", "TimeClockPunchResponse", "CallLogResponse",
     "CustomerBrandingResponse", "UserSettingsResponse", "KioskProfileLastContactResponse",
     "BiometricsConsentSubmissionResponse", "TeamTimeMessageSubmissionResponse",
+    "CheckpointCreateResponse", "CheckpointDetailsUpdateResponse",
 }
 
 CONFIG_PATH = os.path.join(
@@ -645,36 +646,37 @@ def entity_pair_advisories(rel, lines, root, changed):
                     "name a Response type — %s." % (rel, index_no, name, sibling, SKILL))
     return out
 
+def advisories_for(path):
+    """Every advisory this file earns, or [] when it is out of scope.
 
-def main():
-    try:
-        payload = json.load(sys.stdin)
-    except Exception:
-        return 0
+    Everything main() used to do between reading `file_path` off the payload and building the
+    additionalContext block. Extracted so the PostToolBatch sweep in sweep_tool_writes.py runs
+    these exact checks on files written by Bash or an MCP tool, rather than a second copy that
+    would drift. The early returns are the scope contract and are unchanged: non-.cs, missing,
+    generated, build output, or outside the three capped projects all yield nothing.
 
-    load_thresholds()
-
-    tool_input = payload.get("tool_input") or {}
-    path = tool_input.get("file_path") or ""
+    Callers must have run load_thresholds() first. It is not called here because a sweep checks
+    many files in one process and the config only needs reading once.
+    """
     if not path.endswith(".cs") or not os.path.isfile(path):
-        return 0
+        return []
     base = os.path.basename(path)
     if base.endswith(".Designer.cs") or base.endswith(".designer.cs"):
-        return 0
+        return []
 
     rel, root = repo_relative(path)
     if "/obj/" in rel or "/bin/" in rel:
-        return 0
+        return []
 
     cap = next((c for prefix, c in FILE_CAPS if rel.startswith(prefix)), None)
     if cap is None:
-        return 0
+        return []
 
     try:
         with open(path, encoding="utf-8-sig", errors="replace") as handle:
             lines = handle.read().split("\n")
     except Exception:
-        return 0
+        return []
 
     # A trailing newline leaves a final empty element that is not a line, which made the
     # count one high for the 139 Core files that end in one. The other 395 do not, and for
@@ -736,6 +738,18 @@ def main():
 
     advisories.extend(entity_pair_advisories(rel, lines, root, changed))
 
+    return advisories
+
+
+def main():
+    try:
+        payload = json.load(sys.stdin)
+    except Exception:
+        return 0
+
+    load_thresholds()
+
+    advisories = advisories_for((payload.get("tool_input") or {}).get("file_path") or "")
     if not advisories:
         return 0
 

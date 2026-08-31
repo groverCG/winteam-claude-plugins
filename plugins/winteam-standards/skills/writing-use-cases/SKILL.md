@@ -3,6 +3,10 @@ name: writing-use-cases
 description: >-
   Use when a ViewModel method starts coordinating more than one Manager, or when creating or changing anything
   under WinTeam.Mobile.Core/UseCases/.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Inject a use case's collaborators and pass it data, never a ViewModel

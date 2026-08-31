@@ -4,6 +4,10 @@ description: >-
   Use when building or restyling a screen in WinTeam.Mobile.iOS or .Android — a new ViewController,
   Fragment, cell or xib, or a visual change to an existing one — or when a setup method (ViewDidLoad,
   OnCreateView, AwakeFromNib) assigns a font, colour, tint, border or corner radius.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Keep static UI values in markup, not in code

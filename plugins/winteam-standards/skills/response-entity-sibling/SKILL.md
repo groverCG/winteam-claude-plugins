@@ -7,6 +7,10 @@ description: >-
   offline use. Also use when a Manager, ViewModel or platform View is typed with a *Response instead of its
   *Entity sibling. Covers [AutoMap], WinTeamBusinessEntityBase, choosing the [PrimaryKey], TextBlob companion
   strings, and the WTBaseManager synchronizers.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Response → Entity siblings, and Entity as the single source of truth

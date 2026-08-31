@@ -4,6 +4,10 @@ description: >-
   Use when adding or changing user-facing text — a new screen's labels, a button title, an alert, a
   validation or error message, a toast — or when rewording existing copy, and when a string literal is
   about to be written into WinTeam.Mobile.iOS, .Android or .Core instead of AppStrings.resx.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # AppStrings — centralizing user-facing strings

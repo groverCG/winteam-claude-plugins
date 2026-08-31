@@ -4,6 +4,10 @@ description: >-
   Use before writing any helper — formatting, parsing, validating, converting, collection work — or
   before adding a file under an Extensions, Utils, Utilities or Services folder, and when asked whether
   something like it already exists in MobileCore.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Search MobileCore before you write a helper

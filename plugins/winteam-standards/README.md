@@ -26,8 +26,13 @@ General-purpose code standards for the WinTeam mobile app. **Not branch-specific
 | `commands/size-report.md` | manual | File, method-length and parameter-count audit. Repo-wide, or scoped to paths / `--changed` |
 | `commands/leak-audit.md` | manual | Subscription asymmetry, lambda handlers, missing teardown. Same scoping |
 | `commands/mvvm-audit.md` | manual | Sweep of existing manual `SetProperty`/`RelayCommand`, ranked for migration. Same scoping |
+| `commands/ui-audit.md` | manual | Presentation sweep across all four axes — static values in code, dark mode, tablet sizing, `AppStrings`. Same scoping |
 | `commands/new-slice.md` | manual | **Writes files.** Scaffolds a vertical slice and appends its five wiring registrations |
-| `hooks/hooks.json` | automatic | Advisory `PostToolUse` check on every `.cs` edit |
+| `hooks/entity_pair_brief.py` | automatic | `PreToolUse` brief on the pair and Manager-caching rules, before the file is authored |
+| `hooks/presentation_brief.py` | automatic | `PreToolUse` brief on the markup rules — routed by path, one brief per write |
+| `hooks/check_cs_edit.py` | automatic | Advisory `PostToolUse` check on every `.cs` edit made through `Edit`/`Write` |
+| `hooks/check_presentation_edit.py` | automatic | Advisory `PostToolUse` check on markup and on platform `.cs`, for the four presentation skills |
+| `hooks/sweep_tool_writes.py` | automatic | `PostToolBatch` catch-all for anything written by something else — a Bash heredoc, `sed -i`, an MCP tool |
 
 Skills and commands are addressed with the plugin prefix — `/winteam-standards:size-report`. The bare forms do
 not resolve. Inside this plugin, prose cross-references between skills stay bare
@@ -41,7 +46,7 @@ The sixteen skills above carry no `disable-model-invocation`, so their descripti
 invokes them when they apply. That is the point: a size cap, a teardown rule, or a Manager's return type is only
 useful if it fires *before* the code is written, and you will not remember to ask.
 
-The four commands are manual because none of them is a guardrail. Three are **sweeps** — you want a ranked
+The five commands are manual because none of them is a guardrail. Four are **sweeps** — you want a ranked
 backlog when you have decided to spend time on it, not while you are trying to ship something else — and
 `new-slice` additionally because it writes files (see below).
 
@@ -57,6 +62,62 @@ Expect the two size skills to fire on most C# edits, and `shaping-manager-contra
 That is inherent to a 10-line method cap and a 13-file boundary violation; it is the trade being made
 deliberately. `building-vertical-slices` is scoped to *"has no files yet"* precisely so it does **not** join
 them — if it starts firing on ordinary edits, narrow its description rather than making it manual.
+
+## The hooks, and why there are five
+
+A skill's `description` only competes for attention at turn start. By the time a Manager is actually being
+written the model is mid-execution, and two cases were observed where nothing fired at all: **executing an
+already-approved plan** that already named the file and method shapes, and **writing a file through something
+other than `Write`**. The hooks are the deterministic half of the answer; the shared `when_to_use` block on
+every skill (convention 9) is the model-facing half.
+
+| Hook | Event | Covers |
+|---|---|---|
+| `entity_pair_brief.py` | `PreToolUse`, `Edit`/`Write` | Path match only. Emits the pair rules *before* the file is authored |
+| `presentation_brief.py` | `PreToolUse`, `Edit`/`Write` | Path match only. Six briefs — xib/storyboard, layout, drawable, values, asset catalogue, `AppStrings` |
+| `check_cs_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: size, parameters, teardown, entity pairs |
+| `check_presentation_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: hardcoded colours and dimensions, double-faded drawables, static styling in setup methods, `AppStrings` drift |
+| `sweep_tool_writes.py` | `PostToolBatch`, no matcher | Everything else — a Bash heredoc, `sed -i`, `tee`, `cp`, an MCP server's own file-creation call |
+
+**The presentation pair was added last, and the gap it closed was structural rather than a wording problem.**
+The four presentation skills — `declarative-static-styling`, `checking-dark-mode`, `sizing-for-tablets`,
+`appstrings` — are the only cluster here whose trigger material is *not* `.cs`, and all three of the original
+hooks return early on anything that is not a `.cs` file. The entire markup surface therefore had no
+deterministic coverage at all: a hundred-odd xibs and storyboards, as many layout XMLs, the drawables, the
+asset catalogue and `AppStrings.resx`. The sweep now watches those extensions too, confined to the two
+platform projects and Core's `Resources/` folder because `.xml` and `.resx` are far too common to accept
+repo-wide.
+
+**Every check in `check_presentation_edit.py` was counted against the whole repo before it shipped, and five
+candidates were dropped because the count came back wrong.** A hex literal in a *drawable* turns out to be
+the house style in the majority of them, while the same literal in a *layout* is vanishingly rare; a font
+with no tablet `<variation>` is the majority case, as is a `@dimen` with no `values-large` override and an
+imageset with no dark asset. All five are still stated in `presentation_brief.py`, where a rule costs
+nothing, and all five are swept by `/winteam-standards:ui-audit`, where the user has opted in. The module
+docstring records each one with its number so nobody adds them back — **that list is the most useful thing
+in the file.** The lesson generalises: three of the five looked obviously right until they were counted.
+
+**Why the third one watches the filesystem instead of matching tool names.** A list of tools that can write a
+file is wrong the moment someone installs a new MCP server. The sweep instead asks git what changed and
+compares mtimes against a per-session stamp, so it covers writers that do not exist yet. It excludes paths the
+same batch wrote through `Edit`/`Write`, because `check_cs_edit.py` already reported those and one advisory
+printed twice reads as a bug.
+
+**The stamp is what keeps it quiet.** Without it, every batch would re-report every dirty file for the rest of
+the session. `SessionStart` lays the mark down so the first batch already has a floor to measure against. A
+batch made up entirely of known read-only tools returns *without* advancing it — a backgrounded shell can land
+a file during that window, and moving the floor past it would lose it for good. An unknown tool name is not on
+the read-only list and therefore still triggers a sweep; that polarity is the whole point.
+
+All five share one contract: **advisory only, exit 0, never block.** A `PreToolUse` hook *can* return a
+`permissionDecision` and refuse the write, which is the only genuinely deterministic lever available — a hook
+cannot invoke a skill, so injected context is otherwise the ceiling. It is deliberately not used: a false
+positive would stall an edit, and the never-block invariant is worth more than the extra determinism.
+
+`check_cs_edit.py` owns the architecture checks, `check_presentation_edit.py` owns the presentation ones and
+imports that file's git helpers and method parser, and `sweep_tool_writes.py` imports both. There is
+deliberately no second copy of the parser — it would drift, and the thresholds it enforces are the reason any
+of this exists.
 
 ## `new-slice` writes files, and that is a deliberate exception
 
@@ -204,6 +265,8 @@ What is specific to this plugin — where things go:
 | A rule Claude should apply while writing code | `skills/<gerund-name>/SKILL.md` |
 | An on-request sweep or audit you invoke by name | `commands/*.md`, with `disable-model-invocation: true` |
 | A deterministic check on every edit | `hooks/check_cs_edit.py` — advisory only, must never block |
+| A deterministic check on markup, or a presentation rule | `hooks/check_presentation_edit.py` — same contract, and **count the candidate repo-wide before adding it** |
+| A check that must survive a non-`Write` writer | `hooks/sweep_tool_writes.py` — same contract; import the checks from `check_cs_edit.py`, never copy them |
 | A reviewer or analyst persona | `.claude/agents/` — **outside this plugin**, for the reason argued above |
 
 Four things that are easy to get wrong:
@@ -254,6 +317,13 @@ Four things that are easy to get wrong:
    a reader go there. Three exact figures once accumulated here, in the file that defines the conventions, one
    of them wrong and the other two waiting to be. This README is edited far less often than the code it would
    describe, so a number here goes stale silently and nothing surfaces it.
+
+9. **Every skill carries the shared `when_to_use` block, verbatim.** It names the two cases where skills were
+   observed silently not firing — mid-execution of an already-approved plan, and a file written by something
+   other than `Write`/`Edit`. `when_to_use` is appended to `description` for trigger matching against a
+   *combined* 1,536-character budget, which is why the invariant lives there instead of being pasted into
+   sixteen descriptions and blowing convention 7. Copy it from any existing skill and do not reword it per
+   skill: the point is that it reads as one rule, not sixteen suggestions.
 
 ## Relationship to the other plugin
 

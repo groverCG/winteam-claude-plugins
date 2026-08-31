@@ -3,6 +3,10 @@ name: shaping-manager-contracts
 description: >-
   Use when creating a Manager in WinTeam.Mobile.Core, adding or changing a public method on one or on an
   I*Manager interface, or deciding what type a Manager hands back.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Let a Manager return entities, and nothing that knows about a screen

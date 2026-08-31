@@ -3,6 +3,10 @@ name: checking-dark-mode
 description: >-
   Use when a hex literal, UIColor.FromRGB, new Color(...), a drawable, or an .imageset enters
   WinTeam.Mobile.Android or WinTeam.Mobile.iOS, or when asked to check dark mode for a screen or view.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Dark mode is a resource axis, not a styling pass

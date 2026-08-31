@@ -4,6 +4,10 @@ description: >-
   Use when adding or renaming a public method, class or parameter in WinTeam.Mobile.Core, when writing
   or reviewing /// doc comments, when about to write a // comment explaining what a line does, or when
   adding a method with no /// block.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Name the code so it explains itself, document the contract so callers don't have to read it

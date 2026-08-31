@@ -3,6 +3,10 @@ name: keeping-files-small
 description: >-
   Use when creating a .cs file in WinTeam.Mobile.Core or a platform project, or adding a member to one already
   past 200 lines. Whole-file length only — method length is keeping-core-methods-small.
+when_to_use: >-
+  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
+  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
+  heredoc, `sed -i`, or an MCP server's own file-creation call.
 ---
 
 # Keep a file down to one responsibility

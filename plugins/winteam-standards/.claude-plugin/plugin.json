@@ -1,7 +1,7 @@
 {
   "name": "winteam-standards",
-  "description": "General-purpose code standards for the WinTeam mobile app: file and method size limits, maximum parameter counts, layer boundaries, Manager contracts, Response-to-Entity mapping, use cases, vertical-slice composition, helper reuse across the MobileCore submodule, subscription teardown, TinyIoC dependency injection, MVVM source generators, naming and documentation rules, and the presentation-layer conventions — AppStrings localization, dark-mode and tablet theming, and static styling in markup rather than setup code. Not branch-specific — applies to WinTeam.Mobile.Core and both platform projects on any branch.",
-  "version": "2.7.0",
+  "description": "General-purpose code standards for the WinTeam mobile app: file and method size limits, maximum parameter counts, layer boundaries, Manager contracts, Response-to-Entity mapping, use cases, vertical-slice composition, helper reuse across the MobileCore submodule, subscription teardown, TinyIoC dependency injection, MVVM source generators, naming and documentation rules, and the presentation-layer conventions — AppStrings localization, dark-mode and tablet theming, and static styling in markup rather than setup code — the last four enforced on the markup surface itself, not only on C#. Not branch-specific — applies to WinTeam.Mobile.Core and both platform projects on any branch.",
+  "version": "2.9.0",
   "author": {
     "name": "Grover Choque",
     "email": "grover.choque@workwave.com"
