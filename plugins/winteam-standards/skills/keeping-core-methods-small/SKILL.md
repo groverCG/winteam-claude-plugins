@@ -21,7 +21,7 @@ Two limits, both **only for `WinTeam.Mobile.Core/`** — the business logic laye
 The "flag at" numbers are the machine-readable source of truth and live in one place:
 [`thresholds.json`](../../thresholds.json) at the root of this plugin (`maxBodyLines`, `maxParams`,
 `lengthCarveOuts`). The edit
-hook reads it and `/winteam-standards:size-report` applies it; the table above restates it for readability.
+hook reads it and `/winteam-standards:code-style` applies it; the table above restates it for readability.
 **If they disagree, the file is right** — and fix the table.
 
 **Platform view methods are exempt from both.** Declaring and wiring UI elements in
@@ -119,10 +119,10 @@ The worst over-parameterised declarations under `WinTeam.Mobile.Core/`, and why 
 `WTPunchFlowPersistentClient` constructor and `WTTimePunchQueuableHttpMessage` constructor are pure collaborator
 lists, so both are `[Inject]` cases; `ToPunchRequest` and `RunOfflineConnectivityWithGifAnimation` are data
 that wants a record; `SubmitTimeMessagesAsync` is declared on an interface, so every implementor inherits its
-signature. That list is short enough to work through; ask for `/winteam-standards:size-report`.
+signature. That list is short enough to work through; ask for `/winteam-standards:code-style`.
 
 Method *length* is the larger problem — **several hundred** Core methods already exceed 15 lines.
-`/winteam-standards:size-report` derives the live counts for both, parameters and length.
+`/winteam-standards:code-style` derives the live counts for both, parameters and length.
 **That is not a backlog to work through — it is context.** Apply the limit to code you write or modify; do not open unrelated methods to
 shorten them.
 

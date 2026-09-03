@@ -179,7 +179,7 @@ command is stale, not the repo.**
 1. Fill the `TODO` markers, starting with the endpoint route — nothing downstream is testable until it is real.
 2. The auto-firing skills police each file as you edit it: `shaping-manager-contracts` on the manager,
    `appstrings` on every string, `declarative-static-styling` on the views, `keeping-files-small` throughout.
-3. `/winteam-standards:size-report --changed` once the files have real bodies.
+3. `/winteam-standards:code-style --changed` once the files have real bodies.
 4. `senior-reviewer` on the diff before the PR.
 
 One slice per change. If you find yourself running this twice before the first one renders, stop.

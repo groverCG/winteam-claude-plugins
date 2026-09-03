@@ -14,9 +14,9 @@ two siblings, and the reason all three can stay enabled.
 
 Four scoping decisions are load-bearing:
 
-  * The checks are imported from check_cs_edit.py and check_presentation_edit.py, never
-    reimplemented. A second copy of the parser would drift from the first, and the thresholds it
-    enforces are the whole point.
+  * The checks are imported from check_cs_edit.py, check_presentation_edit.py and
+    check_comments.py, never reimplemented. A second copy of the parser would drift from the
+    first, and the thresholds it enforces are the whole point.
   * A stamp file per session holds the epoch of the last sweep, and only files whose mtime has
     passed it are considered. Without that gate every batch would re-report every dirty file
     for the rest of the session, which is precisely how a hook gets muted.
@@ -40,7 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # what this sweep is for.
 ALREADY_REPORTED_BY = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
-# What the two checkers between them can say something about. `.cs` was the original list, and
+# What the three checkers between them can say something about. `.cs` was the original list, and
 # widening it is the whole reason this file changed: all three of the plugin's first hooks returned
 # early on anything else, so a xib, a layout XML or AppStrings.resx written by any tool at all —
 # Edit included — was never looked at. The non-`.cs` extensions are confined to the two platform
@@ -75,11 +75,16 @@ MAX_ADVISORIES = 20
 SAFE_SESSION = re.compile(r"[^A-Za-z0-9_-]")
 
 
-def stamp_path(session_id):
+def stamp_path(session_id, suffix=".stamp"):
     """Where this session's high-water mark lives.
 
     Under the system temp dir rather than the plugin, because the plugin is served read-only
     from a version-keyed cache and per-session state has no business in a source tree.
+
+    `suffix` exists so a second hook can keep its own per-session mark in the same directory
+    without colliding with this one — plan_budget_brief.py uses ".planbrief" for the
+    once-per-plan-mode-episode gate. A parameter here rather than a second copy of the
+    sanitise-and-mkdir logic, for the same reason the checks are imported and never duplicated.
     """
     name = SAFE_SESSION.sub("_", session_id or "default")[:128]
     directory = os.path.join(tempfile.gettempdir(), "winteam-standards")
@@ -87,7 +92,7 @@ def stamp_path(session_id):
         os.makedirs(directory, exist_ok=True)
     except Exception:
         return None
-    return os.path.join(directory, name + ".stamp")
+    return os.path.join(directory, name + suffix)
 
 
 def read_stamp(path):
@@ -130,9 +135,9 @@ def repo_root(cwd):
 
 
 def is_in_scope(rel):
-    """Is this repo-relative path one of the two checkers can say anything about?
+    """Is this repo-relative path one of the three checkers can say anything about?
 
-    Deliberately generous — both checkers self-scope and return [] on a path they do not own, so a
+    Deliberately generous — every checker self-scopes and returns [] on a path it does not own, so a
     false positive here costs three `git` calls and nothing else. A false negative costs an advisory,
     which is the expensive direction.
     """
@@ -258,12 +263,13 @@ def main():
     # Imported here, not at module scope. Nothing above this line needs them, and the no-op path
     # runs far more often than this one.
     import check_cs_edit
+    import check_comments
     import check_presentation_edit
 
     check_cs_edit.load_thresholds()
     advisories = []
     for path in paths:
-        for checker in (check_cs_edit, check_presentation_edit):
+        for checker in (check_cs_edit, check_presentation_edit, check_comments):
             try:
                 advisories.extend(checker.advisories_for(path))
             except Exception:
@@ -277,7 +283,7 @@ def main():
     shown = advisories[:MAX_ADVISORIES]
     body = "\n".join(f"  - {item}" for item in shown)
     if len(advisories) > MAX_ADVISORIES:
-        body += ("\n  - ...and %d more — run /winteam-standards:size-report --changed for the full list."
+        body += ("\n  - ...and %d more — run /winteam-standards:code-style --changed for the full list."
                  % (len(advisories) - MAX_ADVISORIES))
 
     context = ("winteam-standards advisories — written outside Edit/Write, so the usual pre-write "

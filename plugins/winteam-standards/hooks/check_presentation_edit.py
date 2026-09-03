@@ -610,11 +610,12 @@ IN_SCOPE = re.compile(
     r"^WinTeam\.Mobile\.(?:iOS|Android)/.*\.cs$")
 
 
-def advisories_for(path):
+def advisories_for(path, report_all=False):
     """Every presentation advisory this file earns, or [] when it is out of scope.
 
     Same contract as check_cs_edit.advisories_for(), so sweep_tool_writes.py can hand it any path
-    from `git status` without pre-filtering.
+    from `git status` without pre-filtering — including `report_all`, which drops the HEAD
+    baseline so /winteam-standards:code-style can report a backlog rather than a regression.
     """
     if not path or not os.path.isfile(path):
         return []
@@ -636,7 +637,7 @@ def advisories_for(path):
     if lines and lines[-1] == "":
         lines.pop()
 
-    changed = check_cs_edit.changed_line_numbers(rel, root)
+    changed = None if report_all else check_cs_edit.changed_line_numbers(rel, root)
     if changed is not None and not changed:
         return []
 

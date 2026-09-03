@@ -646,8 +646,20 @@ def entity_pair_advisories(rel, lines, root, changed):
                     "name a Response type — %s." % (rel, index_no, name, sibling, SKILL))
     return out
 
-def advisories_for(path):
+def advisories_for(path, report_all=False):
     """Every advisory this file earns, or [] when it is out of scope.
+
+    `report_all=False` is the hook gate: only violations this edit introduced or worsened, which
+    is what keeps the advisories about the author's own work. `report_all=True` is the sweep gate
+    used by /winteam-standards:code-style — every violation present, regardless of who wrote it.
+
+    The two gates exist because the same rules serve two questions. "Did I just make this worse?"
+    needs HEAD as a baseline; "what is the backlog?" must not have one, or a repo-wide scan of a
+    clean tree would report nothing at all. Adding the flag here is what let the command stop
+    re-deriving the caps in awk and share this parser instead.
+
+    report_all also skips every git call below, which is the difference between three
+    subprocesses per file and none across a 460-file sweep.
 
     Everything main() used to do between reading `file_path` off the payload and building the
     additionalContext block. Extracted so the PostToolBatch sweep in sweep_tool_writes.py runs
@@ -680,14 +692,20 @@ def advisories_for(path):
 
     # A trailing newline leaves a final empty element that is not a line, which made the
     # count one high for the 139 Core files that end in one. The other 395 do not, and for
-    # those the count was already right — `wc -l` is the counter that under-reports there,
-    # which is why /winteam-standards:size-report uses `awk 'END{print NR}'` to agree.
+    # those the count was already right — `wc -l` is the counter that under-reports there.
+    # /winteam-standards:code-style used to hand-roll a matching counter in `awk` and drift
+    # from this one; it now calls advisories_for() instead, so there is only this counter.
     if lines and lines[-1] == "":
         lines.pop()
 
     advisories = []
     total = len(lines)
-    if total >= cap:
+    if total >= cap and report_all:
+        advisories.append(
+            f"{rel} is {total} lines, at or over the {cap}-line cap for this project. "
+            f"Consider whether a responsibility can come out — see the keeping-files-small skill."
+        )
+    elif total >= cap:
         # Only advise when this edit made it worse. Dozens of files are already over cap, and
         # the method check below is scoped to changed lines for exactly this reason — advising
         # on every edit to a pre-existing offender is what gets a hook muted. Three cases
@@ -707,7 +725,7 @@ def advisories_for(path):
                 f"out instead — see the keeping-files-small skill."
             )
 
-    changed = changed_line_numbers(rel, root)
+    changed = None if report_all else changed_line_numbers(rel, root)
 
     if rel.startswith(CORE_PREFIX):
         for name, decl, body, params, end, kind in parse_methods(lines):

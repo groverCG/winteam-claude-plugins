@@ -113,7 +113,7 @@ when it also breaks rule 3, or when the drawable is text-bearing.
 
 **Aggregate this pass per file, worst-first — never emit a flat list.** Most layouts in this project carry a
 raw `dp` literal, so several hundred individual findings is unreadable, while file rows ranked by count are a
-backlog. This is the same treatment `/winteam-standards:size-report` gives method length, and for the same
+backlog. This is the same treatment `/winteam-standards:code-style` gives method length, and for the same
 reason.
 
 ## Pass 4 — AppStrings

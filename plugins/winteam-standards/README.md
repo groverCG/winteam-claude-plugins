@@ -23,18 +23,23 @@ General-purpose code standards for the WinTeam mobile app. **Not branch-specific
 | `skills/checking-dark-mode` | automatic | The light/dark resource axis: `@color/x`, `values-night`, `drawable-night`, iOS `appearances`. Mechanics in `references/` |
 | `skills/sizing-for-tablets` | automatic | The phone/tablet resource axis: `@dimen/x`, `values-large`, iOS `<variation>` and asset size classes. Mechanics in `references/` |
 | `skills/declarative-static-styling` | automatic | Static font, colour and inset values belong in storyboard/XML, not in `ViewDidLoad`/`OnCreateView` |
-| `commands/size-report.md` | manual | File, method-length and parameter-count audit. Repo-wide, or scoped to paths / `--changed` |
+| `commands/code-style.md` | manual | File size, method length, parameter count and documentation-comment audit. Repo-wide, or scoped to paths / `--changed` |
 | `commands/leak-audit.md` | manual | Subscription asymmetry, lambda handlers, missing teardown. Same scoping |
 | `commands/mvvm-audit.md` | manual | Sweep of existing manual `SetProperty`/`RelayCommand`, ranked for migration. Same scoping |
 | `commands/ui-audit.md` | manual | Presentation sweep across all four axes — static values in code, dark mode, tablet sizing, `AppStrings`. Same scoping |
 | `commands/new-slice.md` | manual | **Writes files.** Scaffolds a vertical slice and appends its five wiring registrations |
 | `hooks/entity_pair_brief.py` | automatic | `PreToolUse` brief on the pair and Manager-caching rules, before the file is authored |
 | `hooks/presentation_brief.py` | automatic | `PreToolUse` brief on the markup rules — routed by path, one brief per write |
+| `hooks/plan_budget_brief.py` | automatic | `PreToolUse`, no matcher, gated on plan mode. The size/parameter/doc/layer budget, once per planning round |
+| `hooks/plan_handoff_brief.py` | automatic | `PreToolUse` on `ExitPlanMode`. Names the files the plan budgeted for and carries the rules into execution |
 | `hooks/check_cs_edit.py` | automatic | Advisory `PostToolUse` check on every `.cs` edit made through `Edit`/`Write` |
 | `hooks/check_presentation_edit.py` | automatic | Advisory `PostToolUse` check on markup and on platform `.cs`, for the four presentation skills |
+| `hooks/check_comments.py` | automatic | Advisory `PostToolUse` check on Core `.cs` — missing and incomplete `///` blocks, narrating `//` comments, commented-out code |
 | `hooks/sweep_tool_writes.py` | automatic | `PostToolBatch` catch-all for anything written by something else — a Bash heredoc, `sed -i`, an MCP tool |
+| `hooks/enforce_session_standards.py` | automatic | `Stop`. Re-checks every file the session touched at end of turn, and **is the one hook that can block** |
+| `hooks/scan_standards.py` | — | Not a hook. The shared engine `code-style` runs, so the command and the hooks cannot drift |
 
-Skills and commands are addressed with the plugin prefix — `/winteam-standards:size-report`. The bare forms do
+Skills and commands are addressed with the plugin prefix — `/winteam-standards:code-style`. The bare forms do
 not resolve. Inside this plugin, prose cross-references between skills stay bare
 (`see \`response-entity-sibling\``) because they are labels, not invocations; **the prefix is for commands**,
 which must be addressed explicitly. **Anything outside this plugin — the agents in `.claude/agents/` especially
@@ -63,7 +68,7 @@ That is inherent to a 10-line method cap and a 13-file boundary violation; it is
 deliberately. `building-vertical-slices` is scoped to *"has no files yet"* precisely so it does **not** join
 them — if it starts firing on ordinary edits, narrow its description rather than making it manual.
 
-## The hooks, and why there are five
+## The hooks, and why there are nine
 
 A skill's `description` only competes for attention at turn start. By the time a Manager is actually being
 written the model is mid-execution, and two cases were observed where nothing fired at all: **executing an
@@ -76,10 +81,14 @@ every skill (convention 9) is the model-facing half.
 | `entity_pair_brief.py` | `PreToolUse`, `Edit`/`Write` | Path match only. Emits the pair rules *before* the file is authored |
 | `presentation_brief.py` | `PreToolUse`, `Edit`/`Write` | Path match only. Six briefs — xib/storyboard, layout, drawable, values, asset catalogue, `AppStrings` |
 | `check_cs_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: size, parameters, teardown, entity pairs |
+| `check_comments.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: missing and incomplete `///`, narrating `//`, commented-out code |
 | `check_presentation_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: hardcoded colours and dimensions, double-faded drawables, static styling in setup methods, `AppStrings` drift |
 | `sweep_tool_writes.py` | `PostToolBatch`, no matcher | Everything else — a Bash heredoc, `sed -i`, `tee`, `cp`, an MCP server's own file-creation call |
+| `plan_budget_brief.py` | `PreToolUse`, no matcher | Gated on `permission_mode == "plan"`. The budget card, once per planning round |
+| `plan_handoff_brief.py` | `PreToolUse`, `ExitPlanMode` | Reads the plan, names its unbudgeted files, routes the other axes on its text |
+| `enforce_session_standards.py` | `Stop`, no matcher | Everything the session touched, re-checked at end of turn. The only hook that blocks |
 
-**The presentation pair was added last, and the gap it closed was structural rather than a wording problem.**
+**The presentation pair closed a gap that was structural rather than a wording problem.**
 The four presentation skills — `declarative-static-styling`, `checking-dark-mode`, `sizing-for-tablets`,
 `appstrings` — are the only cluster here whose trigger material is *not* `.cs`, and all three of the original
 hooks return early on anything that is not a `.cs` file. The entire markup surface therefore had no
@@ -109,19 +118,122 @@ batch made up entirely of known read-only tools returns *without* advancing it �
 a file during that window, and moving the floor past it would lose it for good. An unknown tool name is not on
 the read-only list and therefore still triggers a sweep; that polarity is the whole point.
 
-All five share one contract: **advisory only, exit 0, never block.** A `PreToolUse` hook *can* return a
-`permissionDecision` and refuse the write, which is the only genuinely deterministic lever available — a hook
-cannot invoke a skill, so injected context is otherwise the ceiling. It is deliberately not used: a false
-positive would stall an edit, and the never-block invariant is worth more than the extra determinism.
+**The last pair moved the whole thing one step earlier, into the plan.** The two hooks above that fire
+before a write still fire *as the file is authored* — which is late, because by then the plan has already
+named the file, the class and the method shapes. That is the first of the two silent-failure cases this
+section opens with, and it was only ever half-addressed: the shared `when_to_use` block tells the model an
+approved plan is not an exemption, but nothing put the numbers in front of it while the plan was being
+written. Over the saved plans on this machine, **most name `WinTeam.Mobile.Core` and only a quarter of those
+state any size budget at all** — the rest hand execution a shape nobody costed, and the cost surfaces as a
+`check_cs_edit.py` advisory and a split afterwards, which is the expensive path `keeping-files-small` exists
+to prevent.
 
-`check_cs_edit.py` owns the architecture checks, `check_presentation_edit.py` owns the presentation ones and
-imports that file's git helpers and method parser, and `sweep_tool_writes.py` imports both. There is
-deliberately no second copy of the parser — it would drift, and the thresholds it enforces are the reason any
-of this exists.
+`plan_budget_brief.py` therefore carries **no matcher** and gates on `permission_mode == "plan"` instead. The
+first tool call of a planning round is whatever gets reached for first — a `Read`, a `Grep`, an `Agent`
+launch — and enumerating those names is the same mistake the sweep avoids for writers. The trade is that at
+that moment the plan does not exist yet, so there is nothing to route on and the card is the *universal*
+half: caps, the parameter limit, the `///` rule, the layer order. **The plan file's own `Write` was
+considered as the trigger and rejected**, even though it could be routed: it lands after the plan content is
+composed, and roughly half of the measured sessions write the plan file exactly once, so a brief there would
+influence nothing in those.
+
+`plan_handoff_brief.py` picks up the routed half on `ExitPlanMode`, where `tool_input.plan` hands it the
+finished text. **It adds no coverage and that is not why it exists** — no measured session reaches
+`ExitPlanMode` without having written the plan file first. It exists for *when* its context lands: still in
+the window as the approved plan starts being executed, which is exactly the moment named at the top of this
+section. It is a hand-off note into execution, not a late attempt to fix the plan. It also clears the budget
+card's per-round stamp, which is the only reason these two are a pair rather than two independent additions.
+
+**It is the one brief here that is not one-per-write, and its routes had to be counted twice.** The
+one-brief rule exists because a xib and a drawable have nothing in common; a single plan legitimately spans
+a Manager and two xibs, so suppressing an axis would silently drop it. The first cut then routed on prose —
+the words "label", "alert", "placeholder" for `appstrings`, a bare `*Manager` mention for the entity axis —
+and fired on nine plans in ten, which is wallpaper. Re-anchoring every route on a path or a real code token
+(`WinTeam.Mobile.Core/Entities/`, `AppStrings`, `Bootstrap.cs`, `[Inject]`, the actual subscription calls)
+brought it down by a third. **Plans always spell the full project prefix**, which is what makes path
+anchoring viable and is worth knowing before anyone loosens it.
+
+**Eight of the nine share one contract: advisory only, exit 0, never block.** A `PreToolUse` hook *can*
+return a `permissionDecision` and refuse the write, which is the only genuinely deterministic lever available
+during a write — a hook cannot invoke a skill, so injected context is otherwise the ceiling. It is deliberately
+not used: a false positive would stall an edit, and the never-block invariant is worth more than the extra
+determinism.
+
+`plan_handoff_brief.py` could deny an `ExitPlanMode` too — the CLI hands the reason back and asks for a
+revised plan, so it would not even halt the turn — and it declines for the same invariant plus one reason
+specific to it: **a plan check can only grep prose.** It can see that a plan names a file with no number
+beside it; it cannot see whether a stated number is honest. Blocking on that grades the phrasing, and the
+cheapest way to satisfy it is boilerplate budget lines that change no code. `check_cs_edit.py` counts real
+lines in a real file. **Enforce where you can measure; inform where you cannot.**
+
+### `enforce_session_standards.py` is the ninth, and it blocks
+
+That last sentence is also what licenses the exception. **Everything the `Stop` hook reports is a counted line
+in a real file**, which is the same side of the dividing line `check_cs_edit.py` sits on and the opposite side
+from a plan's prose. It was added because the eight advisory hooks share a blind spot that no wording fixes:
+they all fire *mid-write*, their advisories are suggestions, and the mtime stamp that keeps the sweep quiet
+also guarantees an ignored advisory is **never raised a second time**. Nothing verified that a session ended
+with its own files clean, and the cheapest way to satisfy an advisory was to keep going.
+
+It fires once per turn, takes the files whose mtime is past a session-start mark, runs all four checkers over
+them, and returns `{"decision": "block", "reason": ...}` when something is wrong. Its own floor rather than the
+sweep's: that one advances on every tool batch, and this hook needs a mark that does not move or "changed this
+session" decays into "changed since the last batch".
+
+**What makes blocking safe is that every finding is still HEAD-relative.** 294 Core methods are over the length
+cap and 929 documentation findings exist already; a hook that blocked on those would be unsatisfiable, and an
+unsatisfiable hook gets deleted rather than obeyed. The checkers only fire when an edit made a file worse, so
+the block is always about the author's own work.
+
+Three guards bound it, and the third is the one worth defending:
+
+1. `stop_hook_active` — already a continuation this hook caused, so report and stop.
+2. A cap on findings in the reason. That text is the next turn's instructions, not a report.
+3. **A per-session ledger: a file that has blocked once is never blocked again.** Some findings are a judgment
+   call rather than a fix — an over-cap file needs a responsibility taken out, which needs the feature's
+   context, and sometimes the honest answer is "not here, not now". A hook with no escape from that is a hook
+   that gets disabled, so it grants one. The reason text says as much, and separates the mechanical findings
+   from the judgment ones for exactly this reason.
+
+The relent path reports through `systemMessage`, not `additionalContext`. A `Stop` hook that does not block has
+no channel to the model — the turn is over — so the outstanding findings go to the **user**, who is the one who
+can decide they are acceptable.
+
+### The comment checks, and the number that shaped them
+
+`check_comments.py` closed the last gap between the skills and the hooks: `naming-and-documenting-members`
+requires a `///` block on every method and forbids a `//` that narrates a body, and until it existed **neither
+rule was measured anywhere.** Both were counted against the whole repo first, per the rule above.
+
+**912 of 948 public and protected members in Core carry no `///` block — 96%.** The house style is currently
+the inverse of the rule, which decided the gate: the check fires when the *declaration line itself* changed —
+a new member, or an edited signature — and deliberately not when a line deep inside an existing undocumented
+method changed. The wider gate the length check uses (any line in `decl..end`) would have turned every edit to
+an existing method into a documentation advisory. That is not a stricter hook, it is a muted one.
+
+The comment rule measured far smaller: **226 narrating comments and 25 commented-out-code lines**, reported as
+two findings because they have two different fixes. **A first pass put those at 426 and 157**, using an `awk`
+proxy that read brace depth `>= 2` as "inside a method" — which over-counts by 258, because a file-scoped
+namespace puts class-level members at depth 2, as do property accessors and object initializers. Worth knowing
+before anyone re-measures with a grep and concludes the check is missing things: the grep is wrong, not the
+check.
+
+`check_cs_edit.py` owns the architecture checks, `check_presentation_edit.py` owns the presentation ones,
+`check_comments.py` owns the documentation ones, and the last two import the first's git helpers and method
+parser. `sweep_tool_writes.py` and `enforce_session_standards.py` import all three. There is deliberately no
+second copy of the parser — it would drift, and the thresholds it enforces are the reason any of this exists.
+
+**`code-style` imports them too, and that was the last piece of drift to go.** The command used to re-derive
+the caps in `awk` and write a throwaway parser to the scratchpad, which cost a permission prompt on every run
+and disagreed with the hook about how to count a file's last line. It now runs `scan_standards.py`, which calls
+the same `advisories_for()` the hooks call — with one difference, named explicitly in that function: hooks pass
+`report_all=False` and see only what an edit made worse, the command passes `report_all=True` and sees the
+backlog. **One parser, two gates.** Without the flag a repo-wide scan of a clean tree would report nothing,
+which is how a report ends up agreeing with a hook by saying nothing at all.
 
 ## `new-slice` writes files, and that is a deliberate exception
 
-`size-report`, `leak-audit` and `mvvm-audit` are read-only because they are **audits** — not because read-only is
+`code-style`, `leak-audit` and `mvvm-audit` are read-only because they are **audits** — not because read-only is
 a plugin principle. A scaffolder that cannot write is just a skill printed twice, so `new-slice` carries `Write`
 and `Edit`.
 
@@ -251,7 +363,7 @@ claude plugin validate .claude/plugins/winteam-standards --strict
 ```
 
 `thresholds.json` in this directory is the source of truth for the size caps — the hook reads it, the
-`size-report` command applies it, and the two size skills cite it. Change a cap there, not in four places.
+`code-style` command applies it, and the two size skills cite it. Change a cap there, not in four places.
 
 ## Contributing
 
@@ -267,6 +379,7 @@ What is specific to this plugin — where things go:
 | A deterministic check on every edit | `hooks/check_cs_edit.py` — advisory only, must never block |
 | A deterministic check on markup, or a presentation rule | `hooks/check_presentation_edit.py` — same contract, and **count the candidate repo-wide before adding it** |
 | A check that must survive a non-`Write` writer | `hooks/sweep_tool_writes.py` — same contract; import the checks from `check_cs_edit.py`, never copy them |
+| A rule that must land *before the plan is written* | `hooks/plan_budget_brief.py` for the universal card, `hooks/plan_handoff_brief.py` for anything routed on the plan's text — and **count the route against `~/.claude/plans/` before adding it** |
 | A reviewer or analyst persona | `.claude/agents/` — **outside this plugin**, for the reason argued above |
 
 Four things that are easy to get wrong:
@@ -278,7 +391,7 @@ Four things that are easy to get wrong:
   must be addressed explicitly, and **anything outside this plugin — the agents especially — must use the
   prefixed form** or it will not resolve.
 - **Never tell the model to run a command.** Nothing invokes a slash command on the model's behalf, so
-  ``run `/winteam-standards:size-report` `` inside a skill is a dead end. Write ``ask for `/…` `` instead.
+  ``run `/winteam-standards:code-style` `` inside a skill is a dead end. Write ``ask for `/…` `` instead.
 - **Don't forget the `version` bump, and never move it backwards.** Nothing enforces it yet, so it is a review
   item — and a reset to a number someone already installed is the same bug as no bump at all.
 

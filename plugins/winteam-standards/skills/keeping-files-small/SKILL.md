@@ -31,7 +31,7 @@ Android gets more room than iOS because fragments declare and initialise their v
 
 The "Flag at" column is the machine-readable source of truth, and it lives in one place:
 [`thresholds.json`](../../thresholds.json) at the root of this plugin. The edit hook reads it,
-`/winteam-standards:size-report`
+`/winteam-standards:code-style`
 applies it, and the numbers above restate it for readability. **If this table and that file disagree, the
 file is right** — and fix the table.
 
@@ -131,7 +131,7 @@ Deliberately no line counts here. A count written into a skill goes stale silent
 change to the files named above. The names are what this list is for.
 
 For the live figures — how many files sit over each cap, and by how much — ask the user to run
-`/winteam-standards:size-report`, which derives them at run time. A skill cannot invoke a slash command.
+`/winteam-standards:code-style`, which derives them at run time. A skill cannot invoke a slash command.
 
 ## Verify
 
