@@ -220,6 +220,14 @@ def main():
 
     clear_episode_stamp(payload.get("session_id"))
 
+    # `plan` is supplied by the harness and is deliberately *not* in ExitPlanMode's published parameter
+    # schema, which declares only a deprecated `allowedPrompts` and states that the tool reads the plan from
+    # the plan file rather than taking it as an argument. Reading the schema alone therefore says this line
+    # always yields "" and that this whole hook is dead code. It is not: on a real ExitPlanMode call it
+    # returns the plan text, verified by the brief below being emitted with the DI route matched, the entity
+    # and AppStrings routes correctly silent, and the one .cs path the plan named correctly scored as
+    # budgeted. Do not "fix" this into globbing ~/.claude/plans — that adds a stale-file failure mode to a
+    # line that works.
     plan = (payload.get("tool_input") or {}).get("plan") or ""
     brief = brief_for(plan)
     if not brief:

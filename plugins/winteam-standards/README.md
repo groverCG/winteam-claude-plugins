@@ -10,6 +10,7 @@ General-purpose code standards for the WinTeam mobile app. **Not branch-specific
 | `skills/keeping-files-small` | automatic | 200-line cap in Core (flag at 250), 350 for iOS, 450 for Android — whole project, not just `Views/` — and where to put the seam |
 | `skills/keeping-core-methods-small` | automatic | 10-line method bodies (flag at 15) and max 3 parameters, **Core only** |
 | `skills/naming-and-documenting-members` | automatic | `///` docs on every method; `//` comments only for formulas; naming rules |
+| `skills/ordering-class-members` | automatic | Where a member goes: state above behaviour, a helper below its caller. All three projects |
 | `skills/respecting-layer-boundaries` | automatic | View → ViewModel → Manager → Proxy/DbProxy, where a use case sits, and which folder a new class goes in |
 | `skills/shaping-manager-contracts` | automatic | What a Manager may return or accept — the repo's most-violated boundary, double-digits deep |
 | `skills/writing-use-cases` | automatic | When an operation earns a `UseCases/` class, and the context-record shape it takes |
@@ -35,6 +36,7 @@ General-purpose code standards for the WinTeam mobile app. **Not branch-specific
 | `hooks/check_cs_edit.py` | automatic | Advisory `PostToolUse` check on every `.cs` edit made through `Edit`/`Write` |
 | `hooks/check_presentation_edit.py` | automatic | Advisory `PostToolUse` check on markup and on platform `.cs`, for the four presentation skills |
 | `hooks/check_comments.py` | automatic | Advisory `PostToolUse` check on Core `.cs` — missing and incomplete `///` blocks, narrating `//` comments, commented-out code |
+| `hooks/check_member_order.py` | automatic | Advisory `PostToolUse` check on `.cs` in all three projects — state declared below behaviour, a single-caller helper above its caller |
 | `hooks/sweep_tool_writes.py` | automatic | `PostToolBatch` catch-all for anything written by something else — a Bash heredoc, `sed -i`, an MCP tool |
 | `hooks/enforce_session_standards.py` | automatic | `Stop`. Re-checks every file the session touched at end of turn, and **is the one hook that can block** |
 | `hooks/scan_standards.py` | — | Not a hook. The shared engine `code-style` runs, so the command and the hooks cannot drift |
@@ -47,7 +49,7 @@ which must be addressed explicitly. **Anything outside this plugin — the agent
 
 ## Why the skills are automatic and the commands are not
 
-The sixteen skills above carry no `disable-model-invocation`, so their descriptions load into context and Claude
+The seventeen skills above carry no `disable-model-invocation`, so their descriptions load into context and Claude
 invokes them when they apply. That is the point: a size cap, a teardown rule, or a Manager's return type is only
 useful if it fires *before* the code is written, and you will not remember to ask.
 
@@ -68,7 +70,7 @@ That is inherent to a 10-line method cap and a 13-file boundary violation; it is
 deliberately. `building-vertical-slices` is scoped to *"has no files yet"* precisely so it does **not** join
 them — if it starts firing on ordinary edits, narrow its description rather than making it manual.
 
-## The hooks, and why there are nine
+## The hooks, and why there are ten
 
 A skill's `description` only competes for attention at turn start. By the time a Manager is actually being
 written the model is mid-execution, and two cases were observed where nothing fired at all: **executing an
@@ -83,6 +85,7 @@ every skill (convention 9) is the model-facing half.
 | `check_cs_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: size, parameters, teardown, entity pairs |
 | `check_comments.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: missing and incomplete `///`, narrating `//`, commented-out code |
 | `check_presentation_edit.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: hardcoded colours and dimensions, double-faded drawables, static styling in setup methods, `AppStrings` drift |
+| `check_member_order.py` | `PostToolUse`, `Edit`/`Write` | Parses the result: state declared below behaviour, a single-caller helper above its caller. All three projects, and never reaches the `Stop` hook |
 | `sweep_tool_writes.py` | `PostToolBatch`, no matcher | Everything else — a Bash heredoc, `sed -i`, `tee`, `cp`, an MCP server's own file-creation call |
 | `plan_budget_brief.py` | `PreToolUse`, no matcher | Gated on `permission_mode == "plan"`. The budget card, once per planning round |
 | `plan_handoff_brief.py` | `PreToolUse`, `ExitPlanMode` | Reads the plan, names its unbudgeted files, routes the other axes on its text |
@@ -435,8 +438,8 @@ Four things that are easy to get wrong:
    observed silently not firing — mid-execution of an already-approved plan, and a file written by something
    other than `Write`/`Edit`. `when_to_use` is appended to `description` for trigger matching against a
    *combined* 1,536-character budget, which is why the invariant lives there instead of being pasted into
-   sixteen descriptions and blowing convention 7. Copy it from any existing skill and do not reword it per
-   skill: the point is that it reads as one rule, not sixteen suggestions.
+   seventeen descriptions and blowing convention 7. Copy it from any existing skill and do not reword it per
+   skill: the point is that it reads as one rule, not seventeen suggestions.
 
 ## Relationship to the other plugin
 

@@ -32,6 +32,9 @@ specific and you will get them wrong:
 - `winteam-standards:respecting-layer-boundaries` — always
 - `winteam-standards:keeping-files-small` and `winteam-standards:keeping-core-methods-small` — always
 - `winteam-standards:naming-and-documenting-members` — always
+- `winteam-standards:ordering-class-members` — always. Placement, not size: state above behaviour, and a
+  single-caller helper below its caller. Note it governs members the diff *adds*; do not ask for a reorder of
+  members the diff only moved past
 - `winteam-standards:shaping-manager-contracts` — if the diff touches `Managers/` or an `I*Manager`
 - `winteam-standards:response-entity-sibling` — if the diff touches `Entities/` (any subfolder), or changes
   what a Manager returns. Covers the `*Response` leak above the Manager, and an `*Entity` missing its

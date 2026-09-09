@@ -23,7 +23,8 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge-base:*)"
+      "Bash(git merge-base:*)",
+      "Bash(python3 .claude/plugins/winteam-standards/hooks/scan_standards.py:*)"
     ]
   },
   "extraKnownMarketplaces": {

@@ -30,9 +30,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import check_cs_edit
 import check_comments
+import check_member_order
 import check_presentation_edit
 
-CHECKERS = (check_cs_edit, check_presentation_edit, check_comments)
+CHECKERS = (check_cs_edit, check_presentation_edit, check_comments, check_member_order)
 
 # First match wins, so order matters: the narrower patterns come first.
 MARKERS = (
@@ -43,6 +44,7 @@ MARKERS = (
     ("entity-pair", re.compile(r"response-entity-sibling")),
     ("doc-comment", re.compile(r"/// block")),
     ("comment", re.compile(r"narrates the body|commented-out code")),
+    ("member-order", re.compile(r"ordering-class-members")),
     ("presentation", re.compile(
         r"declarative-static-styling|checking-dark-mode|sizing-for-tablets|appstrings")),
 )

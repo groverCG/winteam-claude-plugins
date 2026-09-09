@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Authoring-budget brief for winteam-standards, delivered while the plan is being written.
 
-Runs as a PreToolUse hook with **no matcher**, gated on `permission_mode == "plan"`. Emits the
-size, parameter, documentation and layer budget once per plan-mode episode, as additionalContext,
-so the numbers are in context while the plan is composed rather than after the code is written.
-Never blocks, always exits 0.
+Runs as a PreToolUse hook with **no matcher**, gated on `permission_mode == "plan"` and standing down on
+ExitPlanMode. Emits the size, parameter, documentation and layer budget once per plan-mode episode, as
+additionalContext, so the numbers are in context while the plan is composed rather than after the code is
+written. Never blocks, always exits 0.
+
+One note on the output field, because the docs will make it look wrong: `hookSpecificOutput.additionalContext`
+is published for SessionStart, UserPromptSubmit and PostToolUse, and the PreToolUse entry lists only
+`permissionDecision`, `permissionDecisionReason`, `updatedInput` and `hookEventName`. It nonetheless works on
+PreToolUse — verified by this card landing in a live plan-mode session, rendered as "PreToolUse hook additional
+context". Do not migrate this to `updatedInput`; that would rewrite the tool call being made.
 
 Why this exists: the README's own account of why the five existing hooks were needed names
 "executing an already-approved plan that already named the file and method shapes" as one of the
@@ -124,6 +130,18 @@ def main():
     if mode != "plan":
         return 0
 
+    # Gate 1b. ExitPlanMode is the one tool name worth naming, and it is not a walk-back of the
+    # no-matcher decision above: this is the *boundary* of the episode the card is scoped to, not a
+    # guess about which tools a plan reaches for, so it cannot go stale when a new MCP server appears.
+    # Two reasons to stand down here. The card is advice for composing a plan, and at ExitPlanMode the
+    # plan is already written, so it would arrive as pure tokens. More importantly plan_handoff_brief.py
+    # matches this same call and removes the stamp read below; hooks for one event run in parallel, so
+    # without this gate the two race. If the removal landed first this hook would re-emit the card at
+    # hand-off *and* re-create the stamp, and the next planning episode in the session would get no card —
+    # destroying exactly the pairing the fourth scoping decision in the module docstring relies on.
+    if payload.get("tool_name") == "ExitPlanMode":
+        return 0
+
     # Gate 2. One card per plan-mode episode. Imported here rather than at module scope: the
     # no-op path above runs on every tool call and has no business paying for it.
     import sweep_tool_writes
@@ -137,6 +155,11 @@ def main():
     import check_cs_edit
     check_cs_edit.load_thresholds()
 
+    # Rendered before the stamp is written, not after. The stamp's promise is "this episode has had its
+    # card", so anything that can fail must fail before the promise is recorded — otherwise a raised
+    # exception in card() leaves the stamp set and the episode silently loses the brief for good.
+    context = card(check_cs_edit.FILE_CAPS, check_cs_edit.MAX_BODY_LINES, check_cs_edit.MAX_PARAMS)
+
     try:
         sweep_tool_writes.write_stamp(stamp, 1)
     except Exception:
@@ -145,9 +168,7 @@ def main():
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "additionalContext": card(
-                check_cs_edit.FILE_CAPS, check_cs_edit.MAX_BODY_LINES, check_cs_edit.MAX_PARAMS
-            ),
+            "additionalContext": context,
         }
     }))
     return 0

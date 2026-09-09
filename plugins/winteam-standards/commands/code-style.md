@@ -27,10 +27,10 @@ Scope: `$ARGUMENTS`
 Every axis honours the scope. Every figure in the report is derived from the run itself — there are no recorded
 repo-wide figures to compare against, so the report states its own totals.
 
-**Three axes have a volume problem, and aggregation solves it — not narrowing scope.** Method length,
-documentation comments and in-body comments each run into the hundreds repo-wide. Several hundred individual
-findings is unreadable; grouped into file rows ranked worst-first, it is a backlog. Never emit a flat list for
-those three.
+**Four axes have a volume problem, and aggregation solves it — not narrowing scope.** Method length,
+documentation comments and in-body comments each run into the hundreds repo-wide, and member order into the
+low hundreds. Several hundred individual findings is unreadable; grouped into file rows ranked worst-first, it
+is a backlog. Never emit a flat list for those four.
 
 ## Gather
 
@@ -87,16 +87,17 @@ cut -f1,2 "$S/findings.tsv" | sort | uniq -c | sort -rn | head -40   # worst fil
 ```
 
 `findings.tsv` is `axis <TAB> path <TAB> line <TAB> text`. The axes are `file-size`, `parameters`,
-`method-length`, `doc-comment`, `comment`, `teardown`, `entity-pair`, `presentation` and `other`.
+`method-length`, `doc-comment`, `comment`, `member-order`, `teardown`, `entity-pair`, `presentation` and
+`other`.
 
 Four things to know about that script, all of which have bitten a previous version of this command:
 
-- **It is the same code the hooks run**, importing `check_cs_edit.py`, `check_presentation_edit.py` and
-  `check_comments.py`. This command no longer re-derives the caps in `awk`, and no longer writes a throwaway
+- **It is the same code the hooks run**, importing `check_cs_edit.py`, `check_presentation_edit.py`,
+  `check_comments.py` and `check_member_order.py`. This command no longer re-derives the caps in `awk`, and no longer writes a throwaway
   parser to the scratchpad. Two counters for one rule disagree eventually; one cannot.
 - **The thresholds are not yours to choose.** The script reads them from
   [`thresholds.json`](../thresholds.json) — `fileCaps`, `maxBodyLines`, `maxParams`, `lengthCarveOuts`,
-  `requireDocComments`, `commentCarveOutPrefixes`. If a value here disagreed with that file, the file wins.
+  `requireDocComments`, `commentCarveOutPrefixes`, `requireMemberOrder`. If a value here disagreed with that file, the file wins.
   The skills own the *rules*: **if a skill and this command disagree, the skill wins.**
 - **It runs in `report_all` mode**, so it reports every violation present rather than only the ones the working
   diff introduced. That is the opposite of the hooks' gate, and it is why a repo-wide run is not silent on a
@@ -105,8 +106,9 @@ Four things to know about that script, all of which have bitten a previous versi
   scan with a silent gap reads as a clean bill of health.
 
 **Method, parameter and comment findings are `WinTeam.Mobile.Core`-only** by the rules' own scope, so a scope
-naming only a platform folder yields file-size and presentation findings and nothing else. The report must say
-so rather than appear to have checked.
+naming only a platform folder yields file-size, presentation and member-order findings and nothing else. The
+report must say so rather than appear to have checked. `member-order` is the one C# axis that does cover all
+three projects — ordering has no platform dimension.
 
 ## Report
 
@@ -126,7 +128,7 @@ Three rules about scope, all of which exist to stop the report lying about being
    clean bill of health.
 3. **If the scope contains no `WinTeam.Mobile.Core/` files, say the Core-only axes did not run.**
 
-Then seven sections. Give every finding a `path:line` so it is clickable. If a section is empty, say so in one
+Then eight sections. Give every finding a `path:line` so it is clickable. If a section is empty, say so in one
 line — an omitted section reads as unchecked.
 
 **Every section states how many it found alongside how many it shows** — `31 found — showing top 5`. The caps
@@ -162,7 +164,18 @@ below exist to keep the report readable, not to make the backlog look smaller th
    because it is unambiguous. **Narrating comments** are a signal that a name is wrong or a block wants
    extracting, so treat each one as a candidate extraction rather than a candidate deletion, and never
    recommend deleting a comment without saying what should replace it.
-7. **Next actions — at most five, each one directly actionable, and name how many candidates they were ranked
+7. **Member order — grouped by file, and by which of the two axes each finding is on.** State declared below
+   behaviour comes first; a single-caller helper above its caller second. Two things to say every time. This
+   axis is **advisory-only and never reaches the `Stop` hook**, deliberately, so nothing here is blocking
+   anything. And a fix here is a **move**, which means the risk is the diff: recommend a reorder only where it
+   is a handful of members, say so plainly when a file would need twenty moved, and never recommend one as part
+   of a split or an extraction — `keeping-files-small` forbids reordering there and wins. `Entities/` files
+   dominate this axis by count and are the least worth touching; say that rather than ranking them.
+
+   The third half of the rule — a caller's helpers as one contiguous block — is **not checked** and will not
+   appear in `findings.tsv`. If it matters for a file under discussion, read it by eye against
+   `ordering-class-members` and say you did.
+8. **Next actions — at most five, each one directly actionable, and name how many candidates they were ranked
    from.** This is the section that makes the report usable, so do not skip or pad it.
 
    For each: the target, why it ranks here, and the literal request to make. Nothing in this plugin fixes code,
@@ -192,7 +205,7 @@ below exist to keep the report readable, not to make the backlog look smaller th
 - **This command holds no `Write`, deliberately.** The previous version did, solely to write a parser to the
   scratchpad; `scan_standards.py` is committed, so there is nothing left to write and the grant was dropped
   rather than left lying around.
-- **Never emit a flat list for the method-length, `///` or comment axes.** Group by file. A report nobody reads
+- **Never emit a flat list for the method-length, `///`, comment or member-order axes.** Group by file. A report nobody reads
   enforces nothing.
 - Distinguish **pre-existing** from **newly introduced**. Only the latter belongs to whoever is working now, and
   conflating them makes the report feel like blame for someone else's code. `--changed` is the scope that

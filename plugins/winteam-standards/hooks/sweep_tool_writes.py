@@ -264,12 +264,13 @@ def main():
     # runs far more often than this one.
     import check_cs_edit
     import check_comments
+    import check_member_order
     import check_presentation_edit
 
     check_cs_edit.load_thresholds()
     advisories = []
     for path in paths:
-        for checker in (check_cs_edit, check_presentation_edit, check_comments):
+        for checker in (check_cs_edit, check_presentation_edit, check_comments, check_member_order):
             try:
                 advisories.extend(checker.advisories_for(path))
             except Exception:

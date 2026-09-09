@@ -21,6 +21,10 @@
 
   "requireDocComments": true,
 
+  "requireMemberOrder": true,
+
+  "_requireMemberOrderComment": "Read by hooks/check_member_order.py. Set to false to silence both member-order axes — a property or field declared below its type's first constructor or method, and a private single-caller helper declared above its caller. Unlike the other checks here this one covers all three projects, because ordering has no platform dimension. Counted against the whole repo before shipping, per the rule in README.md: 64 files offend on the first axis and 19 on the second, so 78 of 867 non-generated .cs files are involved and 91% already conform — this is a keep-it-that-way rule. The contiguous-helper-block half of the rule is deliberately not checked — it fires on 44 of 150 Core files, mostly on sibling helpers that read correctly, so it lives in the skill text only.",
+
   "commentCarveOutPrefixes": [
     "TODO",
     "HACK",
