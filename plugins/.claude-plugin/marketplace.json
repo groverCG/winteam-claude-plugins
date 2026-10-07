@@ -7,10 +7,6 @@
   "description": "Local marketplace for WinTeam-Mobile branch-specific plugins.",
   "plugins": [
     {
-      "name": "timeclock-refactor",
-      "source": "./timeclock-refactor"
-    },
-    {
       "name": "winteam-standards",
       "source": "./winteam-standards"
     }
