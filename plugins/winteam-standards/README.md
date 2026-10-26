@@ -29,6 +29,7 @@ everything here is true on `master` and on any feature branch.
 | `commands/mvvm-audit.md` | manual | Sweep of existing manual `SetProperty`/`RelayCommand`, ranked for migration. Same scoping |
 | `commands/ui-audit.md` | manual | Presentation sweep across all four axes — static values in code, dark mode, tablet sizing, `AppStrings`. Same scoping |
 | `commands/new-slice.md` | manual | **Writes files.** Scaffolds a vertical slice and appends its five wiring registrations |
+| `commands/scale-for-tablets.md` | manual | **Writes files.** Applies tablet sizes to a screen from the Android size map, ports them to iOS markup, and asks where no tablet value exists |
 | `hooks/entity_pair_brief.py` | automatic | `PreToolUse` brief on the pair and Manager-caching rules, before the file is authored |
 | `hooks/presentation_brief.py` | automatic | `PreToolUse` brief on the markup rules — routed by path, one brief per write |
 | `hooks/plan_budget_brief.py` | automatic | `PreToolUse`, no matcher, gated on plan mode. The size/parameter/doc/layer budget, once per planning round |
@@ -56,9 +57,9 @@ The seventeen skills above carry no `disable-model-invocation`, so their descrip
 invokes them when they apply. That is the point: a size cap, a teardown rule, or a Manager's return type is only
 useful if it fires *before* the code is written, and you will not remember to ask.
 
-The five commands are manual because none of them is a guardrail. Four are **sweeps** — you want a ranked
+The six commands are manual because none of them is a guardrail. Four are **sweeps** — you want a ranked
 backlog when you have decided to spend time on it, not while you are trying to ship something else — and
-`new-slice` additionally because it writes files (see below).
+`new-slice` and `scale-for-tablets` additionally because they write files (see below).
 
 **That line is what settled `mvvm-audit`.** It was a manual-only skill (`auditing-mvvm-boilerplate`) until it was
 converted, and the conversion is worth understanding as a rule rather than a one-off: **a skill that can only be
@@ -237,17 +238,25 @@ the same `advisories_for()` the hooks call — with one difference, named explic
 backlog. **One parser, two gates.** Without the flag a repo-wide scan of a clean tree would report nothing,
 which is how a report ends up agreeing with a hook by saying nothing at all.
 
-## `new-slice` writes files, and that is a deliberate exception
+## `new-slice` and `scale-for-tablets` write files, and that is a deliberate exception
 
-`code-style`, `leak-audit` and `mvvm-audit` are read-only because they are **audits** — not because read-only is
-a plugin principle. A scaffolder that cannot write is just a skill printed twice, so `new-slice` carries `Write`
-and `Edit`.
+`code-style`, `leak-audit`, `mvvm-audit` and `ui-audit` are read-only because they are **audits** — not because
+read-only is a plugin principle. A scaffolder that cannot write is just a skill printed twice, so `new-slice`
+carries `Write` and `Edit`. A fixer that cannot write is just `ui-audit`'s Pass 3 printed twice, so
+`scale-for-tablets` carries them too.
 
 What is *not* negotiable is `disable-model-invocation: true`. An eight-file scaffold that appends to
 `Bootstrap.cs`, `NavigationRoutes.cs`, `AppCoordinator.Navigation.cs` and a parent fragment must never fire on
 inference. Its `## Rules` section carries the rest of the safety contract: refuse if a target exists, append-only
 edits, a diff preview before writing, `TODO` markers instead of guessed REST routes, and no staging or
 committing.
+
+`scale-for-tablets` also holds `AskUserQuestion`, because the sizing skill's "never invent a tablet value" rule
+is what makes a fixer useful only if it can ask. It writes a value only when the value traces to
+`values-large/dimens.xml` or to an answer, previews before writing, and puts every change it can in markup.
+Its baseline is worth knowing: without it, an agent asked to "fix tablet scaling" copied numbers from a
+look-alike iOS cell, extrapolated a "+8 step" for the one size the twin lacked, ignored spacing entirely, and
+never opened the Android counterpart. Every value looked plausible, and none of them traced to the size map.
 
 ## The agents ship in here
 

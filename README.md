@@ -4,7 +4,7 @@ Claude Code plugin marketplace (`winteam`) for the WinTeam mobile app.
 
 | Plugin | What it does |
 |---|---|
-| [`winteam-standards`](plugins/winteam-standards/README.md) | Code standards (size caps, layering, DI, MVVM, teardown, theming, `AppStrings`) as skills, advisory hooks and audit commands, plus four report-only review agents |
+| [`winteam-standards`](plugins/winteam-standards/README.md) | Code standards (size caps, layering, DI, MVVM, teardown, theming, `AppStrings`) as skills, advisory hooks and audit commands, a `scale-for-tablets` fixer, plus four report-only review agents |
 
 ## Install
 

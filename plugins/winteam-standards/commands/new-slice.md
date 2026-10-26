@@ -10,7 +10,7 @@ Create the files a new feature slice needs, in dependency order, with every unkn
 
 Scope: `$ARGUMENTS`
 
-**This is the only write-capable command in the plugin.** The other three are audits. That difference is
+**This is one of two write-capable commands in the plugin**, with `scale-for-tablets`; the rest are audits. That difference is
 deliberate and bounded by `## Rules` below — read them before writing anything.
 
 ## Scope

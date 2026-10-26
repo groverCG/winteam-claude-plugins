@@ -116,6 +116,9 @@ raw `dp` literal, so several hundred individual findings is unreadable, while fi
 backlog. This is the same treatment `/winteam-standards:code-style` gives method length, and for the same
 reason.
 
+This pass only reports. To apply its findings to one screen, asking for each missing tablet value, the user can
+run `/winteam-standards:scale-for-tablets <path>`.
+
 ## Pass 4 — AppStrings
 
 **Reads:** platform and Core `*.cs`, `WinTeam.Mobile.Core/Resources/AppStrings*.resx`.

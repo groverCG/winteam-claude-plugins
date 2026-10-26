@@ -46,7 +46,9 @@ Fires on the *literal*, not on the finished screen:
    one is invisible to everyone who tests on a phone.
 
 2. **No matching `@dimen` at all means leave the literal alone.** Do not create speculative new dimens to have
-   something to reference. An unreferenced name is worse than a literal — it looks like coverage.
+   something to reference. An unreferenced name is worse than a literal — it looks like coverage. A dimen
+   whose tablet value the *user* supplied is not speculative; to fill these gaps for a whole screen, ask for
+   `/winteam-standards:scale-for-tablets`.
 
 3. **Resolve the icon fork before creating any asset.** Ask how the icon reaches its displayed size. An SVG in
    a `UIImageView` sized by explicit constraints rescales losslessly, so it needs a `<variation>` on the
@@ -57,9 +59,10 @@ Fires on the *literal*, not on the finished screen:
    `SetupFontSizeForCustomButton(phoneValue, tabletValue)`. A `<variation>` on a button's font is the trap here
    — it looks configured and does nothing.
 
-5. **`values-large` is the only tablet axis in this repo.** There are exactly three `values*` directories:
-   `values`, `values-large`, `values-night`. Do not reference or create a `sw600dp`- or landscape-qualified
-   variant; none exists.
+5. **`values-large` is the only tablet axis in this repo.** Do not reference or create a `sw600dp`- or
+   landscape-qualified variant; none exists. `values-h640dp` is a short-screen *height* qualifier for kiosk
+   login, and it outranks `values-large` — a name defined there must never also be added to `values-large`,
+   or the tablet value is silently shadowed.
 
 **Mechanics** — the dimens lookup, the `<variation>` block shapes, the resized-asset steps, SF Symbols:
 [`references/tablet-sizing-runbook.md`](references/tablet-sizing-runbook.md).

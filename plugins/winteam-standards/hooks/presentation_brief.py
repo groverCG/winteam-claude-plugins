@@ -78,8 +78,9 @@ DRAWABLE_BRIEF = """winteam-standards — Android drawable rules (invoke `checki
     and stop — inventing either is a design decision wearing engineering clothes."""
 
 VALUES_BRIEF = """winteam-standards — Android resource-map rules (invoke `checking-dark-mode` and `sizing-for-tablets` before writing):
-  - There are exactly three values directories in this repo: `values`, `values-large`, `values-night`. Do not
-    reference or create a `sw600dp`- or landscape-qualified variant; none exists.
+  - values-large is the only tablet axis. Do not reference or create a `sw600dp`- or landscape-qualified
+    variant; none exists. values-h640dp is a short-screen height qualifier that outranks values-large, so a
+    name it defines must never also be added to values-large.
   - values-night/colors.xml is the dark axis and values-large/dimens.xml is the tablet axis. A name needs a
     counterpart there only when its value actually *differs*; an intentionally identical value needs no entry.
   - Never invent a colour name, a dark hex or a tablet value. Both are design decisions, and a wrong one is
