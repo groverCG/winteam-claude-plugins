@@ -13,13 +13,10 @@ apply it.
 
 ## Dependencies
 
-The `winteam-standards:*` skills below ship in the **`winteam-standards` plugin**, which is **optional and
-installed per machine** — nothing in this repo enables it by default. Assume it may well be absent. You live in
-`.claude/agents/` and are available with or without it.
+The `winteam-standards:*` skills below ship in the same plugin you do, so they are available whenever you are.
 
-**If a skill does not resolve, say so in your output.** Name which checks you could not perform and add one
-line: `install winteam-standards@winteam-local for the size, layering and teardown checks`. Then review what you
-can — correctness, behaviour change, and design are all judgeable by inspection.
+**If a skill fails to load anyway, say so in your output** and name which checks you could not perform. Then
+review what you can — correctness, behaviour change, and design are all judgeable by inspection.
 
 Do not substitute remembered numbers for the skills. **A reviewer who silently omits half its checks is worse
 than one that ran none**, because the reader cannot tell "nothing found" from "not checked".
@@ -45,7 +42,7 @@ specific and you will get them wrong:
   `Extensions/`, `Utils/`, `Utilities/` or `Services/` folder
 - `winteam-standards:writing-use-cases` — if the diff touches `UseCases/`
 - `winteam-standards:tearing-down-subscriptions` — if any subscription changed. If the diff is mostly
-  subscriptions, say so and recommend `memory-leak-hunter` instead of duplicating its work.
+  subscriptions, say so and recommend `winteam-standards:memory-leak-hunter` instead of duplicating its work.
 
 **On helper reuse, hold both sides.** `reusing-existing-helpers` requires two call sites that exist *now*, so a
 new abstraction with one caller is a finding — flag speculative generality as firmly as a missed reuse.

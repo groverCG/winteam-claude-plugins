@@ -79,7 +79,7 @@ clean-looking report.
 Then run every check the hooks run, over that list:
 
 ```bash
-python3 .claude/plugins/winteam-standards/hooks/scan_standards.py \
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scan_standards.py" \
   < "$S/scoped.txt" > "$S/findings.tsv" 2> "$S/errors.txt"
 
 cut -f1 "$S/findings.tsv" | sort | uniq -c | sort -rn   # per-axis totals
@@ -224,7 +224,7 @@ This command does not fix anything, and neither does a flag on it. The path is:
    there is nothing to invoke by hand.
 3. The advisory hooks re-check the file on write, and `enforce_session_standards.py` re-checks it at the end of
    the turn.
-4. For anything non-trivial, run `senior-reviewer` on the diff afterwards.
+4. For anything non-trivial, run `winteam-standards:senior-reviewer` on the diff afterwards.
 
 **One target per change.** The failures this codebase produces are silent — a moved bound property or broken
 activation wiring compiles cleanly and fails on device — so a review covering a dozen fixes at once is how one

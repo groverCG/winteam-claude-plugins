@@ -186,7 +186,7 @@ This command does not fix anything. The path is:
 1. Run it, pick **one** target from *Next actions*.
 2. Ask for it in plain language — `tearing-down-subscriptions` fires automatically on the edit.
 3. The advisory hook re-checks pairing on write.
-4. Run `memory-leak-hunter` on the diff afterwards to confirm the fix, since it applies the same rules with the
+4. Run `winteam-standards:memory-leak-hunter` on the diff afterwards to confirm the fix, since it applies the same rules with the
    ViewModel-store caveat in mind.
 
 **One target per change, and never bulk-convert lambda subscriptions.** Converting a lambda to a named handler

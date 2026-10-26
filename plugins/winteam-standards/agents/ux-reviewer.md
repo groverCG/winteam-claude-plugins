@@ -14,13 +14,10 @@ correct — report what the code will produce and flag what needs a visual check
 
 ## Dependencies
 
-The skills below ship in the **`winteam-standards` plugin**, which is **optional and installed per machine** —
-nothing in this repo enables it by default. Assume it may well be absent. You live in `.claude/agents/` and are
-available with or without it.
+The skills below ship in the same plugin you do, so they are available whenever you are.
 
-**If a skill does not resolve, say so in your output.** Name which checks you could not perform and add one
-line: `install winteam-standards@winteam-local for the theming, sizing and string checks`. Then review what
-you can — layout, accessibility and platform divergence are all judgeable by inspection.
+**If a skill fails to load anyway, say so in your output** and name which checks you could not perform. Then
+review what you can — layout, accessibility and platform divergence are all judgeable by inspection.
 
 Do not substitute remembered resource names for the skills. **A reviewer who silently omits half its checks is
 worse than one that ran none**, because the reader cannot tell "nothing found" from "not checked".

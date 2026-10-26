@@ -1,7 +1,7 @@
 {
   "name": "winteam-standards",
-  "description": "General-purpose code standards for the WinTeam mobile app: file and method size limits, maximum parameter counts, layer boundaries, Manager contracts, Response-to-Entity mapping, use cases, vertical-slice composition, helper reuse across the MobileCore submodule, subscription teardown, TinyIoC dependency injection, MVVM source generators, naming and documentation rules (the /// block and the no-narrating-comment rules are measured on the file, not only stated), member declaration order — state above behaviour and a single-caller helper below its caller, checked in all three projects and advisory-only because a reorder is a judgment call rather than a keystroke, and the presentation-layer conventions — AppStrings localization, dark-mode and tablet theming, and static styling in markup rather than setup code — the last four enforced on the markup surface itself, not only on C#. The size, parameter, documentation and layer rules are also delivered at planning time, while the implementation plan is being written, not only when the file is authored. Every file a session creates, modifies or renames is re-checked at the end of the turn, and that check is the one hook here that can hand the turn back rather than only advise. Not branch-specific — applies to WinTeam.Mobile.Core and both platform projects on any branch.",
-  "version": "2.12.0",
+  "description": "General-purpose code standards for the WinTeam mobile app: file and method size limits, maximum parameter counts, layer boundaries, Manager contracts, Response-to-Entity mapping, use cases, vertical-slice composition, helper reuse across the MobileCore submodule, subscription teardown, TinyIoC dependency injection, MVVM source generators, naming and documentation rules (the /// block and the no-narrating-comment rules are measured on the file, not only stated), member declaration order — state above behaviour and a single-caller helper below its caller, checked in all three projects and advisory-only because a reorder is a judgment call rather than a keystroke, and the presentation-layer conventions — AppStrings localization, dark-mode and tablet theming, and static styling in markup rather than setup code — the last four enforced on the markup surface itself, not only on C#. The size, parameter, documentation and layer rules are also delivered at planning time, while the implementation plan is being written, not only when the file is authored. Every file a session creates, modifies or renames is re-checked at the end of the turn, and that check is the one hook here that can hand the turn back rather than only advise. Also bundles four report-only agents — senior-reviewer, ux-reviewer, memory-leak-hunter and ticket-analyst — that review against these skills. Not branch-specific — applies to WinTeam.Mobile.Core and both platform projects on any branch.",
+  "version": "3.0.0",
   "author": {
     "name": "Grover Choque",
     "email": "grover.choque@workwave.com"
@@ -22,6 +22,7 @@
     "localization",
     "theming",
     "dark-mode",
-    "accessibility"
+    "accessibility",
+    "agents"
   ]
 }

@@ -1,14 +1,14 @@
 {
-  "name": "winteam-local",
+  "name": "winteam",
   "owner": {
     "name": "Grover Choque",
     "email": "grover.choque@workwave.com"
   },
-  "description": "Local marketplace for WinTeam-Mobile branch-specific plugins.",
+  "description": "Claude Code plugins for the WinTeam mobile app.",
   "plugins": [
     {
       "name": "winteam-standards",
-      "source": "./winteam-standards"
+      "source": "./plugins/winteam-standards"
     }
   ]
 }

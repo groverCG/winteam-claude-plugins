@@ -1,7 +1,7 @@
 # winteam-standards
 
-General-purpose code standards for the WinTeam mobile app. **Not branch-specific** — unlike its sibling
-`timeclock-refactor`, everything here is true on `master` and on any feature branch.
+General-purpose code standards and review agents for the WinTeam mobile app. **Not branch-specific** —
+everything here is true on `master` and on any feature branch.
 
 ## What's in here
 
@@ -40,12 +40,15 @@ General-purpose code standards for the WinTeam mobile app. **Not branch-specific
 | `hooks/sweep_tool_writes.py` | automatic | `PostToolBatch` catch-all for anything written by something else — a Bash heredoc, `sed -i`, an MCP tool |
 | `hooks/enforce_session_standards.py` | automatic | `Stop`. Re-checks every file the session touched at end of turn, and **is the one hook that can block** |
 | `hooks/scan_standards.py` | — | Not a hook. The shared engine `code-style` runs, so the command and the hooks cannot drift |
+| `agents/senior-reviewer` | automatic | Architecture, design and standards review of a diff, against ten of the skills above. Report only |
+| `agents/ux-reviewer` | automatic | Presentation review: theming, dark mode, tablet sizing, hardcoded strings. Report only |
+| `agents/memory-leak-hunter` | automatic | Leaked handlers, messenger registrations, timers and observers, with the ViewModel-store caveat. Report only |
+| `agents/ticket-analyst` | automatic | Turns a Jira key into scope, affected files and risks before any code is written. Report only |
 
-Skills and commands are addressed with the plugin prefix — `/winteam-standards:code-style`. The bare forms do
-not resolve. Inside this plugin, prose cross-references between skills stay bare
-(`see \`response-entity-sibling\``) because they are labels, not invocations; **the prefix is for commands**,
-which must be addressed explicitly. **Anything outside this plugin — the agents in `.claude/agents/` especially
-— must use the prefixed form.**
+Skills, commands and agents are addressed with the plugin prefix — `/winteam-standards:code-style`,
+`winteam-standards:senior-reviewer`. The bare forms do not resolve. Inside this plugin, prose cross-references
+between skills stay bare (`see \`response-entity-sibling\``) because they are labels, not invocations; **the
+prefix is for commands, agents, and any skill an agent invokes**, which must be addressed explicitly.
 
 ## Why the skills are automatic and the commands are not
 
@@ -246,17 +249,15 @@ inference. Its `## Rules` section carries the rest of the safety contract: refus
 edits, a diff preview before writing, `TODO` markers instead of guessed REST routes, and no staging or
 committing.
 
-## The agents are not in here — they live in `.claude/agents/`
+## The agents ship in here
 
-`senior-reviewer`, `memory-leak-hunter`, `ticket-analyst` and `ux-reviewer` sit in **`.claude/agents/`** at
-project level. They are committed, so they work for everyone who clones with no install step. They are now the
-only Claude Code assets outside this plugin — `.claude/skills/` no longer exists.
+`senior-reviewer`, `memory-leak-hunter`, `ticket-analyst` and `ux-reviewer` live in **`agents/`** and install,
+update and uninstall with the rest of the plugin. They used to sit in WinTeam-Mobile's `.claude/agents/`, which
+meant they were present on clone while the skills they depend on were not; moving them here closes that gap,
+so an agent is never available without its skills.
 
-That is deliberate, and it is the opposite of the choice made for the skills below. The reason: **an agent is
-not supposed to change your code.** All four are report-only, none has `Write` or `Edit` in its `tools`, and
-each body says so explicitly, so the worst a teammate who never asked for one can realistically get is an
-unrequested opinion. The opt-in barrier that protects them from an unwanted hook or an auto-firing skill is
-buying much less here — it would mainly make the reviewers undiscoverable to anyone who skipped the install.
+**An agent is not supposed to change your code.** All four are report-only, none has `Write` or `Edit` in its
+`tools`, and each body says so explicitly.
 
 **Be precise about how strong that is.** All four hold `Bash`, because they need `git diff` and `git show`, and
 `Bash` can write via `sed -i` or a redirect. `tools:` takes bare tool names only — `Bash(git diff:*)` is not
@@ -264,26 +265,12 @@ valid there and grants nothing rather than narrowing — so the read-only proper
 `Write`/`Edit` grant plus an instruction, not on a sandbox. Closing that gap means a `PreToolUse` hook on
 `Bash` per agent. Worth doing if these ever run unattended.
 
-**State the cost honestly, because it is not zero.** Claude delegates to an agent whenever a task matches its
-`description`, without being asked — that is the normal mechanism, so these *do* fire on their own. Their
-descriptions also occupy context so Claude knows they exist. Committing them means every teammate gets four
-reviewers that may speak up uninvited. That is judged an acceptable trade **only** because they do not write;
-if one ever gains `Write` or `Edit`, this argument collapses and it belongs behind an install like everything
-else.
+Claude delegates to an agent whenever a task matches its `description`, without being asked, and their
+descriptions occupy context so Claude knows they exist. That is part of what installing this plugin opts into.
 
-Three of them read this plugin's skills when it is installed: `senior-reviewer` uses ten,
-`ux-reviewer` uses five, and `memory-leak-hunter` uses `tearing-down-subscriptions`.
-All three are written to **state plainly when a skill did not resolve** rather than quietly producing a thinner
-review, so an uninstalled plugin degrades visibly instead of silently. `ticket-analyst` depends on none.
-
-`ux-reviewer` is the one whose exposure changed: its five skills are exactly the set that used to live in
-`.claude/skills/`, where they were
-unconditionally present. They now ship here, so declining the install leaves it with no theming, sizing or
-string checks at all — which is exactly why it gained the same unresolved-skill fallback `senior-reviewer` has.
-
-`timeclock-refactor` keeps its own `refactor-parity-auditor` inside the plugin, because that one references a
-specific commit and types that exist only on the refactor branch, and should be retired or promoted together
-with the rest of that plugin.
+Three of them read this plugin's skills: `senior-reviewer` uses ten, `ux-reviewer` uses five, and
+`memory-leak-hunter` uses `tearing-down-subscriptions`. All three still **state plainly when a skill fails to
+load** rather than quietly producing a thinner review. `ticket-analyst` depends on none.
 
 ## Why this is a plugin and not plain project skills
 
@@ -312,57 +299,66 @@ check.
 
 ## Installing it
 
-**This plugin is optional and nothing installs it for you.** The committed `.claude/settings.json` registers the
-`winteam-local` marketplace only, so `/plugin` lists this plugin but leaves it disabled until you opt in.
+**This plugin is optional and nothing installs it for you.** It is published from the
+[`winteam-claude-plugins`](https://github.com/groverCG/winteam-claude-plugins) marketplace (named `winteam`).
+WinTeam-Mobile's committed `.claude/settings.json` registers that marketplace only, so `/plugin` lists this
+plugin but leaves it disabled until you opt in.
 
-Two commands, once per machine:
-
-```bash
-claude plugin marketplace add ./.claude/plugins        # only if /plugin does not already list it
-claude plugin install winteam-standards@winteam-local -s local
-```
-
-**`-s local` matters.** The default scope is `user`, which would enable these caps in *every* project on your
-machine. `local` records the choice in the gitignored `.claude/settings.local.json`, so it stays per machine and
-never lands in a commit. Uninstall with the same flag:
+From the WinTeam-Mobile checkout, once per machine:
 
 ```bash
-claude plugin uninstall winteam-standards@winteam-local -s local
+claude plugin marketplace add groverCG/winteam-claude-plugins   # only if /plugin does not already list it
+claude plugin install winteam-standards@winteam -s local
 ```
 
-> Two similarly-named directories, easy to mix up: **`.claude/plugins/`** (this repo, hand-written source, the
-> marketplace root) versus **`~/.claude/plugins/`** (your home directory, generated by the CLI, holds the
-> install cache and marketplace registry). Never edit the latter by hand.
+**`-s local` matters.** The default scope is `user`, which would enable these caps and hooks in *every* project
+on your machine. `local` records the choice in the gitignored `.claude/settings.local.json`, so it stays per
+machine and never lands in a commit. Uninstall with the same flag:
+
+```bash
+claude plugin uninstall winteam-standards@winteam -s local
+```
+
+Pick up a new release:
+
+```bash
+claude plugin marketplace update winteam
+claude plugin update winteam-standards@winteam -s local
+```
+
+> **`~/.claude/plugins/`** (your home directory) is generated by the CLI and holds the install cache and
+> marketplace registry. Never edit it by hand; edit this repo instead.
 
 ## Working on this plugin
 
-**Edit the files here, then bump `version` in `.claude-plugin/plugin.json`.** The bump is not optional: an
-installed copy is served from a version-keyed cache under `~/.claude/plugins/cache/`, so without it a teammate
-keeps the old rules and `marketplace update` reports success while changing nothing. Bump the **minor** version
-for a new or removed skill/command, the **patch** for wording inside one.
+**Edit the files in this repo, then bump `version` in `.claude-plugin/plugin.json`.** The bump is not optional:
+an installed copy is served from a version-keyed cache under `~/.claude/plugins/cache/`, so without it a
+teammate keeps the old rules and `marketplace update` reports success while changing nothing. Bump the
+**minor** version for a new or removed skill, command or agent, the **patch** for wording inside one.
 
 **If a change doesn't apply, suspect a pinned install before you suspect the edit.** Check your entry in
 `~/.claude/plugins/installed_plugins.json` — a `version` behind the manifest means you are on a stale cache:
 
 ```bash
-claude plugin marketplace update winteam-local
-claude plugin update winteam-standards@winteam-local -s local
+claude plugin marketplace update winteam
+claude plugin update winteam-standards@winteam -s local
 # still stale? force it:
-claude plugin uninstall winteam-standards@winteam-local -s local
-claude plugin install   winteam-standards@winteam-local -s local
+claude plugin uninstall winteam-standards@winteam -s local
+claude plugin install   winteam-standards@winteam -s local
 ```
 
-Iterate against this directory directly, with no cache in the way:
+Iterate against a local checkout directly, with no cache in the way — run this from the WinTeam-Mobile root,
+since the hooks resolve paths like `WinTeam.Mobile.Core/` against the working directory:
 
 ```bash
-claude --plugin-dir .claude/plugins/winteam-standards
+claude --plugin-dir ../winteam-claude-plugins/plugins/winteam-standards
 ```
 
-Validate after changes:
+Validate after changes, from the root of this repo:
 
 ```bash
-claude plugin validate .claude/plugins
-claude plugin validate .claude/plugins/winteam-standards --strict
+claude plugin validate .
+claude plugin validate plugins/winteam-standards --strict
 ```
 
 `thresholds.json` in this directory is the source of truth for the size caps — the hook reads it, the
@@ -383,7 +379,7 @@ What is specific to this plugin — where things go:
 | A deterministic check on markup, or a presentation rule | `hooks/check_presentation_edit.py` — same contract, and **count the candidate repo-wide before adding it** |
 | A check that must survive a non-`Write` writer | `hooks/sweep_tool_writes.py` — same contract; import the checks from `check_cs_edit.py`, never copy them |
 | A rule that must land *before the plan is written* | `hooks/plan_budget_brief.py` for the universal card, `hooks/plan_handoff_brief.py` for anything routed on the plan's text — and **count the route against `~/.claude/plans/` before adding it** |
-| A reviewer or analyst persona | `.claude/agents/` — **outside this plugin**, for the reason argued above |
+| A reviewer or analyst persona | `agents/*.md` — report-only; no `Write` or `Edit` in `tools` |
 
 Four things that are easy to get wrong:
 
@@ -440,16 +436,3 @@ Four things that are easy to get wrong:
    *combined* 1,536-character budget, which is why the invariant lives there instead of being pasted into
    seventeen descriptions and blowing convention 7. Copy it from any existing skill and do not reword it per
    skill: the point is that it reads as one rule, not seventeen suggestions.
-
-## Relationship to the other plugin
-
-`timeclock-refactor` is branch-scoped and about one refactor; this one is repo-wide. **Both are now automatic
-for skills and manual for commands** — that plugin's six skills dropped `disable-model-invocation` and are
-scoped instead by descriptions naming paths that exist only on the refactor branch.
-
-Where they overlap they agree — the parameter limit here and the context-record pattern there point at the same
-fix, and `keeping-files-small` defers to that plugin's `extract-child-view-model` for the wiring once an
-extraction becomes a view model. **That deferral only actually works now**: while those skills were manual-only,
-nothing could reach them mid-task and the hand-off was prose only.
-
-Both are listed in the same local marketplace and installed independently.

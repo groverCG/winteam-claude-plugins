@@ -26,10 +26,8 @@ Two consequences you must apply:
 
 Invoke `winteam-standards:tearing-down-subscriptions` for the full rule set before you start.
 
-**That skill ships in the `winteam-standards` plugin, which is opt-in per machine.** You live in
-`.claude/agents/` and run with or without it. If the skill does not resolve, say so in one line — `install
-winteam-standards@winteam-local for the full teardown rules` — and continue with the sweep below, which is
-self-contained. Never silently proceed as though you had loaded it.
+That skill ships in the same plugin you do. If it fails to load anyway, say so in one line and continue with
+the sweep below, which is self-contained. Never silently proceed as though you had loaded it.
 
 ## Scope
 
