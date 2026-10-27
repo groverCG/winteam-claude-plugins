@@ -1,0 +1,6 @@
+{
+  "ios": [
+    { "role": "phone", "name": "iPhone 17", "runtime": "iOS 27.0" },
+    { "role": "tablet", "name": "iPad Pro 13-inch (M5)", "runtime": "iOS 27.0" }
+  ]
+}

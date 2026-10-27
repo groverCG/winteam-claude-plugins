@@ -1,0 +1,36 @@
+{
+  "bundleId": "com.workwave.winteam",
+  "environment": "Testing",
+  "environmentSwitch": "ta_dev_tools",
+  "loginButton": "type == 'XCUIElementTypeButton' AND name == 'Log In'",
+  "b2c": {
+    "emailField": "type == 'XCUIElementTypeTextField' AND label == 'Email Address'",
+    "passwordField": "type == 'XCUIElementTypeSecureTextField' AND label == 'Password'"
+  },
+  "homeTab": "type == 'XCUIElementTypeButton' AND label == 'Home'",
+  "homeAnchor": {
+    "all": ["type == 'XCUIElementTypeButton' AND name == 'ic menu'"],
+    "any": [
+      "label == 'View my shift details'",
+      "label == 'View tax forms'",
+      "label == 'View time records'",
+      "label == 'View my job sites and details'"
+    ]
+  },
+  "backButton": "type == 'XCUIElementTypeButton' AND name == 'ic back'",
+  "chromeLabels": ["Home", "Time", "ic menu", "ic back"],
+  "loadingLabels": ["Loading"],
+  "dismissLabels": ["Not right now", "Not now", "No thanks", "Skip"],
+  "alertAcceptLabels": ["OK", "Close", "Got it"],
+  "alertDismissLabels": ["Cancel", "Not now", "Not Now", "No", "Don't Allow", "Close", "Dismiss", "Later"],
+  "blockedLabels": [
+    "Clock in", "Clock out",
+    "Start meal", "End meal", "Start break", "End break", "Start lunch", "End lunch",
+    "Start rest break", "End rest break", "End meal break",
+    "Submit", "Save", "Send", "Resend", "Delete", "Confirm", "Continue", "Log out"
+  ],
+  "protectedDomains": {
+    "timeclock": { "allowedTaps": ["Time", "Home", "Time clock", "Punch log", "Timekeeping"] }
+  },
+  "retentionDays": 3
+}

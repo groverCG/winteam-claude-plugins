@@ -1,0 +1,15 @@
+nodeLinker: hoisted
+minimumReleaseAge: 4320
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - 'undici-types@6.21.0'
+ignoredOptionalDependencies:
+  - applesign
+allowBuilds:
+  '@appium/coresim': true
+  appium-ios-tuntap: true
+  appium: false
+  edgedriver: false
+  geckodriver: false
+  protobufjs: false
+  tldjs: false

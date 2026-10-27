@@ -1,0 +1,11 @@
+{
+  "name": "winteam-device-testing-appium",
+  "private": true,
+  "dependencies": {
+    "appium": "^3.8.0",
+    "appium-uiautomator2-driver": "^8.7.0",
+    "appium-xcuitest-driver": "^12.0.0",
+    "appium-inspector-plugin": "^2026.9.0",
+    "appium-mcp": "^1.97.0"
+  }
+}

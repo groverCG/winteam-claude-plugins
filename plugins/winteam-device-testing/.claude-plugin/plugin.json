@@ -1,0 +1,21 @@
+{
+  "name": "winteam-device-testing",
+  "description": "Runs the WinTeam mobile app on a phone and a tablet simulator to check UI changes visually: logs into the Testing environment, navigates to the affected screens from a screen map, captures screenshots and page sources in portrait and landscape, and flags sizing and layout problems. Drives the app with a dependency-free Python WebDriver client against an Appium install pinned by a pnpm lockfile with a release-age delay and a build-script allowlist, and bundles the Appium MCP server for exploring screens the map does not cover yet. Picks up the visual checks /winteam-standards:scale-for-tablets otherwise leaves owed. Safety gates: Appium logging is off so the password never reaches a log, captures expire after 3 days (pruned at every session start, or on demand with /winteam-device-testing:purge-runs), navigation taps are allowlisted with Clock in/out and other data-changing buttons blocked and the TimeClock screens navigation-only, and every Appium MCP action asks for approval. iOS only for now. Needs a one-time /winteam-device-testing:setup-devices.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Grover Choque",
+    "email": "grover.choque@workwave.com"
+  },
+  "keywords": [
+    "winteam",
+    "appium",
+    "ios",
+    "simulator",
+    "tablet",
+    "ui-testing",
+    "screenshots"
+  ],
+  "dependencies": [
+    "winteam-standards"
+  ]
+}

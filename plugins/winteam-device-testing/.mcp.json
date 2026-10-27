@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "appium-mcp": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_DATA}/appium/node_modules/appium-mcp/dist/index.js"],
+      "env": {
+        "APPIUM_HOME": "${CLAUDE_PLUGIN_DATA}/appium"
+      }
+    }
+  }
+}

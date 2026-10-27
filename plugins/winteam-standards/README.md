@@ -258,6 +258,10 @@ Its baseline is worth knowing: without it, an agent asked to "fix tablet scaling
 look-alike iOS cell, extrapolated a "+8 step" for the one size the twin lacked, ignored spacing entirely, and
 never opened the Android counterpart. Every value looked plausible, and none of them traced to the size map.
 
+Its builds can't prove the sizing, so it ends by listing screens to check on a tablet. With the optional
+[`winteam-device-testing`](../winteam-device-testing/README.md) plugin installed, it hands those screens over
+instead, and the iOS ones get captured and compared on a phone and a tablet simulator.
+
 ## The agents ship in here
 
 `senior-reviewer`, `memory-leak-hunter`, `ticket-analyst` and `ux-reviewer` live in **`agents/`** and install,

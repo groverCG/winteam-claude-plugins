@@ -199,6 +199,13 @@ sizing.** A phone value resolves and renders on a tablet with no error, and a va
 code compiles cleanly. Re-grep the touched `.cs` for the Step 3 patterns, then name every screen to check on
 an iPad simulator and an Android tablet emulator, in both orientations.
 
+**If `winteam-device-testing:verifying-screens-on-devices` is among your available skills**, invoke it with the
+touched iOS files once the builds pass, and fold its report into yours. It runs the iOS checks on a phone and a
+tablet simulator. The Android screens stay on the manual list.
+
+**Otherwise**, keep the manual list as it is, and add one line: the optional `winteam-device-testing` plugin can
+run the iOS checks automatically (see its README).
+
 ## Report
 
 1. Files in scope, and the pairings used.
@@ -212,7 +219,8 @@ an iPad simulator and an Android tablet emulator, in both orientations.
    - a shared drawable.
 5. Cross-platform inconsistencies noticed along the way, such as a phone-value mismatch or a bold label on one
    side only, and the same clipping pattern on a look-alike screen. Report these only; don't fix them.
-6. The build results, and the visual checks still owed.
+6. The build results, and the visual checks: those run by `winteam-device-testing`, with its findings, and
+   those still owed.
 
 ## Rules
 

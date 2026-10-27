@@ -9,6 +9,10 @@
     {
       "name": "winteam-standards",
       "source": "./plugins/winteam-standards"
+    },
+    {
+      "name": "winteam-device-testing",
+      "source": "./plugins/winteam-device-testing"
     }
   ]
 }

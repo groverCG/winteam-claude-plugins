@@ -1,0 +1,155 @@
+{
+  "screens": {
+    "home": {
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Dashboard/HomeView.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Dashboard/HomeHeaderUiView.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Dashboard/DashboardView.*"
+        ],
+        "steps": [],
+        "anchor": {
+          "all": [
+            "type == 'XCUIElementTypeButton' AND name == 'ic menu'"
+          ],
+          "any": [
+            "label == 'View my shift details'",
+            "label == 'View tax forms'",
+            "label == 'View time records'",
+            "label == 'View my job sites and details'"
+          ]
+        }
+      }
+    },
+    "schedule": {
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Schedule/ScheduleViewController.*",
+          "WinTeam.Mobile.iOS/Views/Cells/Schedule/ScheduleViewCell.*"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Schedule'"
+          }
+        ],
+        "anchor": {
+          "any": [
+            "label == 'You have no upcoming schedules to display'",
+            "type == 'XCUIElementTypeCell'"
+          ]
+        }
+      }
+    },
+    "tax-forms": {
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TaxForms/**",
+          "WinTeam.Mobile.iOS/Views/Cells/TaxForms/**"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Tax Forms'"
+          }
+        ],
+        "anchor": "type == 'XCUIElementTypeStaticText' AND label == 'View and download documents'"
+      }
+    },
+    "jobs": {
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Jobs/JobListViewController.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/Jobs/JobListTableViewSource.cs",
+          "WinTeam.Mobile.iOS/Views/Cells/Jobs/JobsListItemCell.*",
+          "WinTeam.Mobile.iOS/Views/Cells/Jobs/JobItemCell.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Jobs'",
+            "settle": 3.0
+          }
+        ],
+        "anchor": {
+          "any": [
+            "type == 'XCUIElementTypeSearchField' AND label == 'Search by name or number'",
+            "type == 'XCUIElementTypeCell'"
+          ]
+        }
+      }
+    },
+    "time-clock": {
+      "domain": "timeclock",
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/TimeLandingView.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/TimePageViewController.cs",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Punches/TimeClockView.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Punches/Buttons/**"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeButton' AND label == 'Time'",
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Time clock'"
+          }
+        ],
+        "anchor": "type == 'XCUIElementTypeButton' AND label == 'Clock in'"
+      }
+    },
+    "punch-log": {
+      "domain": "timeclock",
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Punches/PunchLogView.*",
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Punches/RejectedPunchListView.*"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeButton' AND label == 'Time'",
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Punch log'",
+            "settle": 3.0
+          }
+        ],
+        "anchor": {
+          "any": [
+            "type == 'XCUIElementTypeStaticText' AND label == 'No punches to show'",
+            "type == 'XCUIElementTypeCell' AND visible == 1"
+          ]
+        }
+      }
+    },
+    "timekeeping": {
+      "domain": "timeclock",
+      "ios": {
+        "files": [
+          "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Timesheets/TimekeepingRecordsVC.*",
+          "WinTeam.Mobile.iOS/Views/Cells/Timekeeping/**"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeButton' AND label == 'Time'",
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "predicate": "type == 'XCUIElementTypeStaticText' AND label == 'Timekeeping' AND visible == 1",
+            "settle": 3.0
+          }
+        ],
+        "anchor": "type == 'XCUIElementTypeStaticText' AND label == 'Total hours for this period'"
+      }
+    }
+  }
+}

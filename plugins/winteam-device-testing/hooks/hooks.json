@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/prune_runs.py\" --runs \"${CLAUDE_PLUGIN_DATA}/runs\" --data \"${CLAUDE_PLUGIN_ROOT}/data\" --quiet",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_winteam-device-testing_appium-mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/gate_mcp_action.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
