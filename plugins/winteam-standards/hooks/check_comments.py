@@ -143,15 +143,23 @@ def _is_documentable(lines, name, decl, kind):
     return name not in check_cs_edit.LENGTH_CARVE_OUTS
 
 
-def _returns_a_value(lines, decl, name):
+def _returns_a_value(lines, decl, name, kind):
     """Is the return type something a `<returns>` tag should describe?
 
     `void` and a bare `Task` return nothing. `Task<T>`, `ValueTask<T>` and every ordinary type do.
+    A constructor has no return type at all, so it never owes a `<returns>` — and it must be
+    excluded by `kind`, not by the regex: on `public Foo(int a)` the word before the name is the
+    access modifier, which RETURN_TYPE would otherwise read as the return type. A primary
+    constructor (`public sealed record Foo(int A);`) is the same case reached through the method
+    parser, with `record`, `class` or `struct` in the return-type slot. Both still owe `<summary>`
+    and their `<param>` tags.
     """
+    if kind == "ctor":
+        return False
     match = re.search(RETURN_TYPE.pattern % re.escape(name), lines[decl - 1])
     if not match:
         return False
-    return match.group(1) not in ("void", "Task", "ValueTask")
+    return match.group(1) not in ("void", "Task", "ValueTask", "record", "class", "struct")
 
 
 def _doc_advisories(rel, lines, changed, collapse=True):
@@ -179,14 +187,14 @@ def _doc_advisories(rel, lines, changed, collapse=True):
         documented = text.count("<param ")
         if documented < params:
             gaps.append("%d of %d <param> tags" % (documented, params))
-        if "<returns>" not in text and _returns_a_value(lines, decl, name):
+        if "<returns>" not in text and _returns_a_value(lines, decl, name, kind):
             gaps.append("no <returns>")
         if gaps:
             incomplete.append((decl, name, ", ".join(gaps)))
 
     out = _collapse(rel, missing, collapse, "%s:%d %s() has no /// block",
                     "%s: %d members declared here have no /// block",
-                    "Summary, one <param> each, <returns> when non-void — %s." % SKILL)
+                    "Summary, one <param> each, <returns> when non-void (never on a constructor) — %s." % SKILL)
     out.extend(_collapse(rel, incomplete, collapse, "%s:%d %s()'s /// block is incomplete — %s",
                          "%s: %d /// blocks here are incomplete",
                          "Every parameter needs a <param> — %s." % SKILL))

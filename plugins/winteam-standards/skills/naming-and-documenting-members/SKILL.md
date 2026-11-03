@@ -57,7 +57,8 @@ public async Task<bool> SubmitAsync(SubmitContext context, CancellationToken can
 - `<summary>` — what it does, in one sentence, in terms of the caller's intent. Not a restatement of the name.
 - `<param>` — one per parameter, always. State the *meaning*, including anything the type does not convey:
   units, whether null is allowed, what happens on the edge.
-- `<returns>` — whenever non-void. Say what the value means, not its type.
+- `<returns>` — whenever non-void. Say what the value means, not its type. **Never on a constructor** — it has
+  no return type. A constructor still gets `<summary>` and one `<param>` per parameter.
 - `<exception>` — for anything a caller should reasonably catch.
 - `<remarks>` — where a non-obvious reason lives. See the relocation rule below.
 - `<see cref="..."/>` — to point at related types, as the repo already does.
@@ -133,7 +134,8 @@ than the noisy comment this rule exists to remove.
 
 ## Verify
 
-- Every new method has a `///` block with `<summary>` and one `<param>` per parameter.
+- Every new method has a `///` block with `<summary>` and one `<param>` per parameter, plus `<returns>` when
+  non-void. Constructors carry no `<returns>`.
 - Zero `//` comments in bodies except formula statements. Read each one and ask: is this stating a formula?
   If not, delete it and fix the name.
 - Anything non-obvious and non-formula is captured in `<summary>`/`<remarks>` — not simply dropped.

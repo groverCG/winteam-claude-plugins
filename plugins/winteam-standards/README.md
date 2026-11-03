@@ -7,7 +7,7 @@ everything here is true on `master` and on any feature branch.
 
 | Item | Invocation | Purpose |
 |---|---|---|
-| `skills/keeping-files-small` | automatic | 200-line cap in Core (flag at 250), 350 for iOS, 450 for Android — whole project, not just `Views/` — and where to put the seam |
+| `skills/keeping-files-small` | automatic | 200-line cap in Core (flag at 250), 350 for iOS, 450 for Android — whole project, not just `Views/` — and the design pattern that splits an over-cap class. Never a partial class |
 | `skills/keeping-core-methods-small` | automatic | 10-line method bodies (flag at 15) and max 3 parameters, **Core only** |
 | `skills/naming-and-documenting-members` | automatic | `///` docs on every method; `//` comments only for formulas; naming rules |
 | `skills/ordering-class-members` | automatic | Where a member goes: state above behaviour, a helper below its caller. All three projects |
@@ -225,6 +225,13 @@ namespace puts class-level members at depth 2, as do property accessors and obje
 before anyone re-measures with a grep and concludes the check is missing things: the grep is wrong, not the
 check.
 
+**Constructors never owe a `<returns>`.** They still need `<summary>` and one `<param>` each, but they have no
+return type. The check used to read the word before the member name as the return type, which on
+`public Foo(int a)` is the access modifier, so every documented constructor was told to add a `<returns>`.
+That was a couple of hundred constructors in Core, waiting to be told the moment someone documented them.
+`_returns_a_value()` now excludes `kind == "ctor"` explicitly (`parse_methods()` already labelled them), and
+a positional record's primary constructor, which the parser sees with `record` in the return-type slot.
+
 `check_cs_edit.py` owns the architecture checks, `check_presentation_edit.py` owns the presentation ones,
 `check_comments.py` owns the documentation ones, and the last two import the first's git helpers and method
 parser. `sweep_tool_writes.py` and `enforce_session_standards.py` import all three. There is deliberately no
@@ -237,6 +244,20 @@ the same `advisories_for()` the hooks call — with one difference, named explic
 `report_all=False` and see only what an edit made worse, the command passes `report_all=True` and sees the
 backlog. **One parser, two gates.** Without the flag a repo-wide scan of a clean tree would report nothing,
 which is how a report ends up agreeing with a hook by saying nothing at all.
+
+### The partial-class rule is deliberately not a hook
+
+`keeping-files-small` forbids splitting a class into hand-written `partial` files to get under a cap. A
+partial split keeps one class with every dependency and responsibility, so the skill points at a design
+pattern (collaborator, Strategy, State, use case, Builder, Decorator, child view model, record) that yields
+separate classes. Two uses of `partial` are not splits and are exempt: the iOS `*.designer.cs` half and the
+keyword the MVVM source generators require.
+
+**Skill, brief and reviewer only, no check.** The rule governs changes from now on, and a handful of
+existing types in Core and iOS are already split. They stay as they are. A hook would flag the next edit to
+any of them, which is noise against code nobody is asking to change, so the rule is delivered where it
+shapes a decision: while writing (`keeping-files-small`), while planning (`plan_budget_brief.py`), and in
+review (`senior-reviewer`, which reports only splits the diff introduces).
 
 ## `new-slice` and `scale-for-tablets` write files, and that is a deliberate exception
 
@@ -397,7 +418,7 @@ What is specific to this plugin — where things go:
 Four things that are easy to get wrong:
 
 - **Read the conventions below before adding a skill.** They are the bar, especially the ≤200-character
-  `description` and the ~100-line target. A skill that fires on everything is worse than no skill.
+  `description` and the 500-line limit. A skill that fires on everything is worse than no skill.
 - **Get the reference form right.** Inside this plugin, prose cross-references between auto-firing skills stay
   **bare** (``see `response-entity-sibling` ``). Commands take the `/winteam-standards:` prefix because they
   must be addressed explicitly, and **anything outside this plugin — the agents especially — must use the
@@ -418,11 +439,11 @@ Four things that are easy to get wrong:
    specific location is genuinely the deliverable, put it in a `## Known offenders` section at the end.
 4. Follow the section skeleton the existing skills use: title → why it matters and what it costs to get wrong
    → `## When to use` → `## When NOT to use` → rules or a decision table → `## Verify` with the literal build
-   command. Aim for ~100 lines; treat 140 as the ceiling. Two skills are over it and both carry a second
-   artifact the rules alone do not: `reusing-existing-helpers` at ~160, for a search procedure *and* a
-   placement table, and `shaping-manager-contracts` at 141, for the file-by-file offender list the repo's
-   most-violated boundary needs. **Those are the exceptions, not a new budget** — and note the test is what
-   the extra lines *are*, not how close to 140 you land. A third skill does not get to be 141 for prose.
+   command. **A `SKILL.md` is at most 500 lines** — Claude Code's own guidance for a skill body, and the only
+   length limit here. Being under it is not a reason to add lines: several skills fire together on a single
+   edit and every body loads in full, so each line costs context on every edit it fires for. Keep the body
+   to the rules, and move step-by-step mechanics and long examples into `references/`, which loads only when
+   read — `checking-dark-mode` and `sizing-for-tablets` are the pattern.
    The middle section has two shapes: guardrail skills use `## Rules`, and the procedural ones — `appstrings`,
    `response-entity-sibling`, `declarative-static-styling` — use numbered `## Steps` or
    `## Part N` instead, because they describe a task with an order rather than constraints to satisfy. Either
