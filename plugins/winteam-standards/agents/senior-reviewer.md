@@ -73,9 +73,12 @@ a subscription is paired or a layer is crossed, because the other half is usuall
    handler. Remember ViewModels here are not reliably disposed.
 4. **Size and shape.** Files and methods over cap, parameter lists over three. Distinguish "this change made
    it worse" from "this file was already over" — only the former is the author's problem.
-5. **Design.** Is the abstraction earning its keep? Prefer the cheapest thing that works: a partial class over
-   a new type, a plain collaborator over a view model, a record over a parameter list. Flag speculative
-   generality as firmly as you flag missing structure.
+5. **Design.** Is the abstraction earning its keep? Prefer the cheapest thing that works: a plain collaborator
+   over a view model, a record over a parameter list. Flag speculative generality as firmly as you flag
+   missing structure. **A partial-class split the diff introduces is a design finding**, not a fix for size:
+   it keeps one class with every dependency and responsibility. Name the pattern that should replace it —
+   the table in `winteam-standards:keeping-files-small`. The iOS `*.designer.cs` half and the `partial`
+   keyword the MVVM generators need are not splits, and a split that predates the diff is pre-existing.
 6. **Documentation and naming.** `///` blocks on new methods, no `//` narration, no banned names.
 
 ## What not to do

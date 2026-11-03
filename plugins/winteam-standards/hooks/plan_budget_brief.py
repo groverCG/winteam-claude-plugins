@@ -92,22 +92,23 @@ before writing):
   - File caps: WinTeam.Mobile.Core/ **%d** (aim at %d — the cap carries ~%d lines of tolerance),
     WinTeam.Mobile.iOS/ **%d**, WinTeam.Mobile.Android/ **%d**. Whole project, not only Views/.
     Generated files are exempt.
-  - If a file in this plan cannot fit its cap, **name the seam in the plan**: a partial, a plain
-    collaborator class, a child view model, or a record collapsing a wide parameter surface — in
-    that order of cost. Do not leave it for execution to discover.
-  - One exception to that order: for a **Manager or Proxy**, a new sibling class beats a partial —
-    with its own `I*Manager` interface if a ViewModel injects it. A secondary partial leaves the
-    `[Inject]` properties in the primary file, so the half doing the work has no declaration
-    explaining where its collaborator came from. Follow `Managers/Punches/` or
-    `Proxies/Biometrics/`. Partials in a ViewModel are still fine and idiomatic.
+  - If a file in this plan cannot fit its cap, **name the seam in the plan**: a plain collaborator
+    class, a pattern-shaped extraction (Strategy, State, a use case, Builder, Decorator), a child
+    view model, or a record collapsing a wide parameter surface — and name the pattern. Do not
+    leave it for execution to discover.
+  - **Never a partial-class split, in any layer.** A second `partial` file keeps one class with
+    every dependency and every responsibility — it hides the size, it does not fix it. Each
+    responsibility gets its own class, with its own `I*` interface if something injects it; follow
+    `Managers/Punches/` or `Proxies/Biometrics/`. Exempt: the iOS `*.designer.cs` half, and the
+    `partial` keyword the MVVM source generators need. Existing splits stay; do not add to them.
   - Method bodies **%d lines** (target 10) and **max %d parameters**, WinTeam.Mobile.Core/ only.
     Platform view methods are exempt from both by design.
   - The two parameter fixes are different, and getting them backwards is the common mistake:
     collaborators (managers, services, other view models) become `[Inject]` properties; data that
     travels together becomes a `record` or `readonly record struct`.
-  - Every method gets a `///` block — summary, one `<param>` each, `<returns>` when non-void. A `//`
-    comment never narrates the body: if a line needs explaining, the name is wrong or the block
-    wants extracting. Budget for the doc comments when you budget the lines.
+  - Every method gets a `///` block — summary, one `<param>` each, `<returns>` when non-void (never
+    on a constructor). A `//` comment never narrates the body: if a line needs explaining, the name
+    is wrong or the block wants extracting. Budget for the doc comments when you budget the lines.
   - Layer order is View -> ViewModel -> Manager -> Proxy/DbProxy, no skipping and no reaching back.
     An operation coordinating more than one Manager belongs in UseCases/.
   - Planning a new helper — formatting, parsing, validating, converting? Plan the search first:

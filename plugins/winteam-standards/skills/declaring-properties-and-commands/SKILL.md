@@ -63,7 +63,8 @@ public partial class ThingViewModel : WTBaseObservableRecipient
 ```
 
 - **`partial` is mandatory** on the class. Without it the generator cannot emit, and you get a compile error
-  that does not name the missing keyword.
+  that does not name the missing keyword. The keyword is for the generator, not licence to split the class
+  across hand-written files — see `keeping-files-small`.
 - Declare the **backing field**, not the property. The generator produces the public member from it.
 - `[NotifyPropertyChangedFor]` for a dependent computed property; `[NotifyCanExecuteChangedFor]` for a
   command's enabled state. Reaching for these is what removes hand-written notification chains.

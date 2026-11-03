@@ -136,7 +136,8 @@ below exist to keep the report readable, not to make the backlog look smaller th
 31 and displayed 5 must not read like a section that found 5.
 
 1. **Files over cap**, worst first, with the cap each is measured against. For each of the top few, name the
-   responsibility that could come out — not just the number. A list of line counts is not actionable.
+   responsibility that could come out — not just the number — and the pattern that takes it out, from
+   `keeping-files-small`'s table. A list of line counts is not actionable.
 2. **Parameter violations in Core**, worst first, grouped by whether the extra parameters are **collaborators**
    (fix: `[Inject]` properties) or **data** (fix: a record). That classification is the useful part; the count
    is not. Label each finding as a method, a **constructor**, or an **interface declaration** — the fix differs
@@ -211,6 +212,8 @@ below exist to keep the report readable, not to make the backlog look smaller th
   conflating them makes the report feel like blame for someone else's code. `--changed` is the scope that
   answers this directly; on a repo-wide run, say plainly that most of it predates the reader.
 - Never recommend splitting a file whose length is a flat list of one-line members. Say why it is exempt.
+- **Never recommend a partial-class split as the fix for an over-cap file.** The extraction is a separate
+  class. Existing hand-written partials are pre-existing, not a finding of their own.
 - **The `///` and comment axes are 96%-and-rising pre-existing.** 929 documentation findings and 251 comment
   findings exist across Core. Treat the repo-wide figures as a backlog to draw from, never as a defect list to
   work through, and never as something the reader introduced.

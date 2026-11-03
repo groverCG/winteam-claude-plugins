@@ -1,8 +1,8 @@
 ---
 name: keeping-files-small
 description: >-
-  Use when creating a .cs file in WinTeam.Mobile.Core or a platform project, or adding a member to one already
-  past 200 lines. Whole-file length only — method length is keeping-core-methods-small.
+  Use when creating a .cs file, splitting a class, or adding a member to a file past 200 lines, in any
+  WinTeam.Mobile project. Whole-file length only — method length is keeping-core-methods-small.
 when_to_use: >-
   Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
   an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
@@ -63,61 +63,57 @@ Before adding to a file, not after. Check the line count when you are about to:
 
 ## Where the seam goes
 
-Pick the cheapest option that removes a whole responsibility, in this order:
+**Never a `partial` class.** A second `partial` file is still one class — same dependencies, same
+responsibilities, same reasons to change. It hides the size from the cap and fixes nothing. Split into
+*separate classes*, each with its own dependencies, and pick the shape from the symptom:
 
-1. **A `partial` class in a second file.** Free, no new type, no wiring, no behaviour change. Right when one
-   cohesive block is mechanically separable — message handler registration, a set of computed properties, a
-   block of static strings. Name it `Thing.Aspect.cs`.
+| Symptom in the long file | Pattern | What comes out |
+|---|---|---|
+| Several unrelated jobs in one class | Extract a collaborator | A plain class per job — the default |
+| `switch`/`if` chains on a mode, type or setting | Strategy | One class per branch, behind an interface |
+| Behaviour that changes with the step or status of a flow | State | One class per state; the owner holds the current one |
+| One operation coordinating several Managers | Use case | A `UseCases/` class — see `writing-use-cases` |
+| Long, multi-step assembly of an object | Builder / factory | The assembly, out of the consumer |
+| Retry, logging or caching wrapped around calls | Decorator | A wrapper implementing the same interface |
+| Observable state or message handling | Child view model | A view model the parent owns |
+| The same values threaded through many members | Record | A `readonly record struct` parameter object |
 
-   ```csharp
-   // Thing.cs           — construction, state, the primary flow
-   // Thing.Messages.cs  — every Register/Unregister and handler
-   public partial class Thing { }
-   ```
+Reach for the plain collaborator first; the others earn their extra type only when the symptom is there.
 
-2. **Extract a collaborator with no base class.** A plain class that manipulates state handed to it. The
-   cheapest real extraction, and the first thing to reach for.
+```csharp
+// Shared state travels in an object; the helper gets capabilities as delegates,
+// so it never holds a reference back to its owner.
+internal sealed class StepInputHelper(FlowState state, Func<Task<bool>> confirmAsync)
+{
+    public Task<bool> RunAsync() => confirmAsync();
+}
+```
 
-   ```csharp
-   // Shared state travels in an object; the helper gets capabilities as delegates,
-   // so it never holds a reference back to its owner.
-   internal sealed class StepInputHelper(FlowState state, Func<Task<bool>> confirmAsync)
-   {
-       public Task<bool> RunAsync() => confirmAsync();
-   }
-   ```
+A **child view model** costs base-class choice, construction site, activation and teardown, so it is never
+the first reach. This skill does not own that wiring: use `timeclock-refactor:extract-child-view-model` if
+that opt-in plugin resolves, otherwise `wiring-dependency-injection` and `tearing-down-subscriptions` — and
+say which pieces you could not confirm. **Collapse a wide parameter surface into a record** before
+extracting anything, if several members each thread the same values through.
 
-3. **Extract a child view model.** Only when the extracted piece owns observable state or handles messages.
-   Costs base-class choice, construction-site choice, activation, and teardown — real wiring, so do not
-   reach for it first.
+**Two uses of `partial` are not splits, and stay:** the iOS `*.designer.cs` half that holds the outlets —
+standard iOS practice — and the keyword `[ObservableProperty]`/`[RelayCommand]` require (see
+`declaring-properties-and-commands`). A few existing types are already split across hand-written partials;
+leave them as they are, never add another `Thing.Aspect.cs` to one, and count a member added to either half
+against the whole class.
 
-   This skill does not own that wiring. If `timeclock-refactor` is installed, use
-   `timeclock-refactor:extract-child-view-model` for it — base class, construction site, `[Inject]`,
-   activation and teardown, in order. That plugin is opt-in and its paths are branch-specific, so if it does
-   not resolve, get the wiring from `wiring-dependency-injection` and `tearing-down-subscriptions` instead and
-   say which pieces you could not confirm.
-
-4. **Collapse a wide parameter surface into a record** before extracting anything, if the reason the file is
-   long is that several members each thread the same five values through.
-
-   ```csharp
-   public readonly record struct RequestContext(
-       string Reference, DateTime OccurredAt, bool IsRetry);
-   ```
-
-**Name the responsibility out loud before you cut.** Write one sentence: "this new file is the single source
+**Name the responsibility out loud before you cut.** Write one sentence: "this new class is the single source
 of truth for X." If you cannot finish the sentence, the seam is in the wrong place and you will end up with
-two files mutating the same field — strictly worse than one long file.
+two classes mutating the same field — strictly worse than one long file.
 
 ## Rules
 
 1. **Splitting must not change behaviour.** No reordering of construction, no "while I'm here" fixes. If a
    behaviour change is needed, land it as its own separate change afterwards.
-2. **A `partial` split does not reduce the class's responsibility count** — it only makes the file readable.
-   Don't treat it as having solved a design problem.
+2. **No new partial-class splits, in any layer.** This governs every change from now on; the existing splits
+   are not refactored as part of unrelated work.
 3. **If a class needs an extracted view model, that extraction has its own wiring rules.** Activation and
    teardown are where these go wrong silently. Check `tearing-down-subscriptions` before you finish.
-4. **Don't split a file to get under the cap while leaving the responsibilities entangled.** Two files that
+4. **Don't split a file to get under the cap while leaving the responsibilities entangled.** Two classes that
    each reach into the other's state are worse than one file. Prefer leaving it long and flagging it.
 
 ## Known offenders
@@ -135,6 +131,8 @@ For the live figures — how many files sit over each cap, and by how much — a
 
 ## Verify
 
+- No new hand-written `partial` file for any type — the extraction is a separate class with its own
+  dependencies, named after the responsibility it owns.
 - The new file's line count and the original's are both under their caps — and if the original is not, say
   so rather than claiming success.
 - No behaviour changed: construction order, activation, and teardown are identical.
