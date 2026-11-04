@@ -200,11 +200,12 @@ code compiles cleanly. Re-grep the touched `.cs` for the Step 3 patterns, then n
 an iPad simulator and an Android tablet emulator, in both orientations.
 
 **If `winteam-device-testing:verifying-screens-on-devices` is among your available skills**, invoke it with the
-touched iOS files once the builds pass, and fold its report into yours. It runs the iOS checks on a phone and a
-tablet simulator. The Android screens stay on the manual list.
+touched iOS and Android files once the builds pass, and fold its report into yours. It runs the checks on a
+phone and a tablet: iOS simulators for the iOS files, Android emulators for the Android ones. Keep on the manual
+list only the screens it reports as unmapped or unreachable.
 
 **Otherwise**, keep the manual list as it is, and add one line: the optional `winteam-device-testing` plugin can
-run the iOS checks automatically (see its README).
+run these checks automatically on iOS and Android (see its README).
 
 ## Report
 

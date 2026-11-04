@@ -1,6 +1,7 @@
 # winteam-device-testing
 
-Runs WinTeam on an **iPhone and an iPad simulator** to check UI changes visually.
+Runs WinTeam on a **phone and a tablet**, either iPhone and iPad simulators or Android phone and tablet emulators,
+to check UI changes visually.
 
 - It logs into the **Testing** environment.
 - It opens the screens a change touched, using a screen map.
@@ -10,26 +11,24 @@ Runs WinTeam on an **iPhone and an iPad simulator** to check UI changes visually
 Claude then compares the phone and tablet screenshots side by side and reports what it sees.
 
 This covers the visual check `/winteam-standards:scale-for-tablets` ends with. When this plugin is installed,
-that command hands its touched files here instead of leaving the check to you.
-
-**iOS only for now.** Android screens stay a manual check.
+that command hands its touched files here, iOS and Android, instead of leaving the check to you.
 
 ## Why this is a separate plugin
 
-`winteam-standards` works with no setup. This plugin needs Node, pnpm, Appium, Xcode simulators and a
-test account, so it's opt-in. It depends on `winteam-standards` and never copies anything from it: sizing
+`winteam-standards` works with no setup. This plugin needs Node, pnpm, Appium, Xcode simulators, the Android
+emulator and a test account, so it's opt-in. It depends on `winteam-standards` and never copies anything from it: sizing
 rules stay in one place.
 
 ## Prerequisites
 
 | What | How |
 |---|---|
-| Xcode with an **iPhone 17** and an **iPad Pro 13-inch (M5)** simulator on **iOS 27.0** | Xcode > Window > Devices and Simulators. To use others, change `data/devices.json` |
+| Xcode with an **iPhone 17** and an **iPad Pro 13-inch (M5)** simulator on **iOS 26.5** | Xcode > Window > Devices and Simulators. The app crashes at launch on iOS 27.0 until it adopts the UIScene lifecycle. To use other simulators, change `data/devices.json` |
+| The Android SDK with `platform-tools`, `emulator` and the `android-37.0` Google Play arm64 system image, plus Java 21 | Android Studio > SDK Manager. `ANDROID_HOME` defaults to `~/Library/Android/sdk`, and `JAVA_HOME` should be set in `~/.zshrc` |
+| The **`Medium_Phone_API_37.0`** AVD | Android Studio > Device Manager. Setup creates the tablet AVD, `WinTeam_Tablet_API_37.0`, from it |
 | Node and pnpm | `brew install node pnpm`. **Don't install pnpm through npm** |
-| A Debug build of WinTeam.Mobile.iOS that compiles | The skill builds and installs it on both simulators |
+| A Debug build of WinTeam.Mobile.iOS or WinTeam.Mobile.Android that compiles | The skill builds it and installs it on both devices |
 | A test account in the **Testing** environment, without MFA | See *Test credentials* |
-
-`JAVA_HOME` and `ANDROID_HOME` in `~/.zshrc` will be needed once Android is supported, not yet.
 
 ## Install
 
@@ -47,6 +46,11 @@ lockfile.
 
 Setup installs Appium into the plugin's data folder, `~/.claude/plugins/data/<plugin id>/appium`. That folder
 survives plugin updates and is deleted when you uninstall the plugin. Nothing is installed globally.
+
+Setup also creates the Android tablet AVD under `~/.android/avd` if it's missing. It copies the phone AVD's
+settings with a 2560×1600, 320 dpi screen. Then it checks that the tablet resolves the `xlarge` size bucket,
+the condition for the app to use `values-large`. Uninstalling the plugin leaves the AVD. Delete it in Android
+Studio's Device Manager.
 
 ## Test credentials
 
@@ -66,20 +70,27 @@ are plain text, though, and every process you start can read them, including pac
 
 **Use a Testing-only account.** Never put credentials in this repository, in `data/`, or in a chat.
 
+If the account belongs to more than one tenant, the app shows "Choose an account" after sign-in. Set
+`WT_TEST_TENANT` to the tenant's name as it appears there (or pass `--tenant`), and the script picks that row.
+Without it, the script stops at the picker.
+
 ## Use
 
 ```
 /winteam-device-testing:verify-screens schedule jobs
 /winteam-device-testing:verify-screens WinTeam.Mobile.iOS/Views/Cells/Schedule/ScheduleViewCell.xib
+/winteam-device-testing:verify-screens WinTeam.Mobile.Android/Resources/layout/fragment_time_clock.xml
+/winteam-device-testing:verify-screens time-clock timekeeping --android
 /winteam-device-testing:verify-screens --changed
 ```
 
 `/winteam-standards:scale-for-tablets` calls the same skill, `verifying-screens-on-devices`, on its own at its
 Step 8.
 
-A run:
+A run, per platform:
 
-1. builds the iOS app and installs it on both simulators;
+1. builds the app and installs it on the phone and the tablet. On Android, the script boots both emulators
+   headless, installs the APK, and shuts down the emulators it booted at the end;
 2. logs in;
 3. captures each screen;
 4. runs `check_layout.py`;
@@ -98,12 +109,14 @@ safety*). To delete them sooner:
 `check_layout.py` reads frames from the accessibility tree and flags:
 
 - **unscaled candidates**: an element found on both devices with the same height, for example a 16 pt
-  title or a 50 pt button on a 13" iPad;
+  title or a 50 pt button on a 13" iPad, or the punch-button label that stays 19 dp on an Android tablet;
 - **overlap** between text and buttons;
 - **off-screen** elements outside scrolling content;
-- **tap targets** under 44 pt.
+- **tap targets** under 44 pt on iOS, and under 48 dp on Android (Material's minimum).
 
-Navigation and tab bars are skipped, because they're system-managed.
+Android bounds come in pixels, and are converted to dp with each device's density before any check. Navigation
+and tab bars are skipped, because they're system-managed. On Android, so are the toolbar and the bottom
+navigation (`chromeIds` in `data/app.json`).
 
 The tree carries **no fonts, colours or clipping**. Those come from the screenshots, which Claude reviews. A
 same-height element can be intentional, so each candidate is confirmed or dismissed against the screenshots.
@@ -114,6 +127,11 @@ same-height element can be intentional, so each candidate is confirmed or dismis
   - Appium writes every typed string to its log. `run_capture.py` therefore starts its own Appium server with
     logging off and output discarded, and stops it at the end.
   - Nothing else runs an Appium server. The bundled MCP server is never used for logging in.
+  - On Android, the UiAutomator2 server on the emulator logs its requests to logcat. The script clears logcat
+    right after the sign-in is submitted and again at the end, and the Appium session doesn't collect logcat
+    (`skipLogcatCapture`). Emulators the run booted are shut down, which drops their log buffers.
+  - The Android sign-in page reports the typed password as plain text in its page source. The script reads only
+    its length, and never saves that page.
 - **Screenshots contain account data, and expire.**
   - Runs stay in the plugin's data folder for `retentionDays` (3) in `data/app.json`.
   - Expired runs are deleted **at every Claude Code session start** (a `SessionStart` hook, silent unless it
@@ -125,24 +143,40 @@ same-height element can be intentional, so each candidate is confirmed or dismis
   - The map grows only with screens a change actually touches. It is never meant to cover the whole app.
 - **Navigation is read-only, and the scripts enforce it.** Every tap after login goes through one check:
   - **`blockedLabels`** (Clock in, Clock out, Start/End break, meal and lunch, Submit, Save, Send, Delete,
-    Confirm, Continue, Log out…) are never tapped, whatever the screen map says.
+    Confirm, Continue, Log out…) are never tapped, whatever the screen map says. On Android the check also
+    reads the texts inside the tapped view, because a punch button keeps its label in a child view.
+  - **`blockedIds`** (Android: the punch buttons) are never tapped either. A tap whose point lands inside one of
+    those views is refused, even when the tapped element is an unlabelled inner view.
   - **The Time clock page** (the first page of the Time tab, the `timeclock` domain) is navigation-only. On it the
     script may only tap the tabs and page titles. It reads and captures everything else. The Time tab's other
     pages, Punch log and Timekeeping, are open to explore, with `blockedLabels` still off-limits.
   - **Alerts** get a known-safe button pressed by name (Cancel, Not now, Don't Allow…), or OK when it's their
     only button. Any other alert stops that screen.
   - A refusal shows up as a `blocked` error in the run's `manifest.json`.
-  - The only taps outside this check are the fixed login steps: the environment picker, Log In, and the email
-    field. On a phone, the login may also scroll the sign-in page to bring the email field into view above the
+  - The only taps outside this check are the fixed login steps:
+    - the environment picker;
+    - Log In;
+    - the email field;
+    - the row for the configured tenant on "Choose an account". That row is tapped only while the picker shows,
+      never once the dashboard's menu button is visible.
+
+    On a phone, the login may also scroll the sign-in page to bring the email field into view above the
     keyboard.
-- **The Appium MCP tools ask before acting.** A `PreToolUse` hook lets reading tools (page source, find
-  element, screenshot, text, attributes) run freely, along with scrolling (`appium_gesture` `scroll` and
-  `scroll_to_element`) and the keyboard check (`appium_mobile_keyboard` `is_shown`). Every other tool, including any future one, shows an
-  approval prompt warning that it can tap or type anywhere in the app, including Clock in/out and Submit. The
-  prompt appears in auto mode too. The hook can't tell which button a tap targets, because it only sees an
-  element ID or coordinates, so it asks for every action.
-- **The Testing environment only.** The script switches each simulator to Testing and stops if it can't. It
-  checks the sign-in form before submitting it.
+  - `scroll_to` steps only swipe, leftward or upward, so they can't tap or pull to refresh.
+- **The Appium MCP tools ask before acting.**
+  - A `PreToolUse` hook lets these run freely: the reading tools (page source, find element, screenshot,
+    text, attributes, `select_device`), scrolling (`appium_gesture` `scroll` and `scroll_to_element`) and the
+    keyboard check (`appium_mobile_keyboard` `is_shown`).
+  - Every other tool, including any future one, shows an approval prompt warning that it can tap or type
+    anywhere in the app, including Clock in/out and Submit. On Android that includes the back and home keys
+    (`appium_mobile_press_key`) and switching contexts. The prompt appears in auto mode too.
+  - The hook can't tell which button a tap targets, because it only sees an element ID or coordinates, so it
+    asks for every action.
+- **The Testing environment only.** The script switches each simulator and emulator to Testing and stops if it
+  can't. It checks the sign-in form before submitting it.
+- **The Android tablet must be a tablet to the app.** The script reads each emulator's size bucket and refuses
+  to capture on a tablet that doesn't resolve `xlarge`. Such a device would show phone resources, and the
+  comparison would prove nothing.
 
 ## Why pnpm, and what the settings do
 
@@ -163,17 +197,32 @@ the error and decide on purpose.
 
 ## The screen map
 
-`data/screens.json` maps a screen id to the source files that render it, the steps that reach it from the
-dashboard, and an `anchor` that proves it loaded. `data/app.json` holds what every screen shares: the bundle
-id, the login, the Home check, the back button, and the prompt labels to dismiss. The automation lessons
-behind these are in `skills/verifying-screens-on-devices/references/ios-automation-notes.md`.
+For each platform, `data/screens.json` maps a screen id to three things, in its `ios` and `android` blocks:
+- the source files that render it;
+- the steps that reach it from the dashboard: `tap`, optionally with an `expect`, and `scroll_to`;
+- an `anchor` that proves it loaded.
+
+iOS locators are predicate strings. Android locators are resource ids or texts (see the top of
+`scripts/platforms.py`).
+
+`data/app.json` holds what every screen shares:
+- **at the top level, the labels shared by both platforms:** blocked, dismiss and alert labels, plus the
+  protected domains;
+- **in `ios` and `android`, the platform's locators:** the login, the Home check, the back button, and loading
+  indicators.
+
+The automation lessons behind these are in `skills/verifying-screens-on-devices/references/automation-notes.md`.
 
 To add a screen, ask Claude to explore it. It proposes an entry, and you add it here. Anchor it on content
 (an empty-state text, a field, a cell), never on the navigation bar.
 
 ## Known limitations
 
-- **iOS only.** Android needs a tablet emulator and a tested login through the embedded web view.
+- **iOS 26.5, not 27.0.** The app crashes at launch on iOS 27.0 until it adopts the UIScene lifecycle. Change
+  the runtime in `data/devices.json` back once it does.
+- **Android Debug builds need `-p:EmbedAssembliesIntoApk=true`.** Without it the APK has no assemblies and runs
+  stale ones from an earlier Fast Deployment. The skill builds with the flag.
+- **Screens that need input**, such as a custom date range, can't be prepared: steps only tap and scroll.
 - **Feature flags change the dashboard.** A screen whose row is missing on one device is reported as
   unreachable there.
 - **An iPad navigation-bar bug** in the build tested sometimes shows the wrong bar items after going back. The
