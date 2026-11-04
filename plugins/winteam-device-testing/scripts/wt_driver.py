@@ -118,6 +118,25 @@ class Session:
     def tap_element(self, element):
         self.tap(*self.center(element))
 
+    def swipe(self, x1, y1, x2, y2, duration_ms=500):
+        """Drag a finger from (x1, y1) to (x2, y2); the short hold first makes it a scroll, not a tap."""
+        actions = [
+            {"type": "pointerMove", "duration": 0, "x": x1, "y": y1},
+            {"type": "pointerDown", "button": 0},
+            {"type": "pause", "duration": 100},
+            {"type": "pointerMove", "duration": duration_ms, "x": x2, "y": y2},
+            {"type": "pointerUp", "button": 0},
+        ]
+        self._cmd("POST", "/actions", {"actions": [
+            {"type": "pointer", "id": "finger", "parameters": {"pointerType": "touch"}, "actions": actions}]})
+        self._cmd("DELETE", "/actions")
+
+    def keyboard_shown(self):
+        try:
+            return bool(self.execute("mobile: isKeyboardShown"))
+        except WebDriverError:
+            return False
+
     def type_text(self, text):
         """Type into whichever field has focus, one key at a time."""
         keys = []

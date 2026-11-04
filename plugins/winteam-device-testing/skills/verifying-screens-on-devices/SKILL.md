@@ -66,6 +66,7 @@ logging off, and stops it.
 7. **Unmapped screens.** If the user wants one covered, explore it with the `appium-mcp` tools. Read
    `references/ios-automation-notes.md` first. Reading tools run freely; every action prompts the user for
    approval. Then **propose** a `screens.json` entry in the report: id, `files` globs, `steps` and an `anchor`.
+   Add `"domain": "timeclock"` only if the screen is the Time clock page or something reached from it.
    Do not write it into the plugin from this session.
 8. **Report**, per screen: a row for each device and orientation, with what you saw and the
    `check_layout.py` findings you kept. Then:
@@ -83,11 +84,15 @@ logging off, and stops it.
 3. **The Testing environment only.** The script switches to Testing itself and stops if it can't.
 4. **Navigation is read-only, and enforced.**
    - `run_capture.py` refuses any tap on `blockedLabels` (Clock in/out, breaks, Submit, Save, Delete, Log out…).
-   - On `timeclock` screens it allows only that domain's `allowedTaps`, which are the tabs and page titles.
+   - On the **Time clock page** (the first page of the Time tab, the only `timeclock` screen) it allows only that
+     domain's `allowedTaps`, which are the tabs and page titles. Punch log and Timekeeping are not part of the
+     domain. They are open to explore, with `blockedLabels` still refused.
    - It never accepts an alert, except a lone `OK`.
 
    A `blocked` error in `manifest.json` means this protection worked. Report it, and never work around it.
-   Through the MCP, ask before every action, and never tap anything in the TimeClock domain.
+   Through the MCP, ask before every action. On the Time clock page, tap only a tab or a page title
+   (`Punch log`, `Timekeeping`, `Home`), never anything else on that page. On Punch log and Timekeeping you may
+   tap rows, cells and filters to explore, but never a `blockedLabels` button. Scrolling runs without a prompt.
 5. **Map only what changed.** Screenshots and page sources contain account data: names, jobs, tax forms. Add a
    screen to the map when a change touches it, never to cover the whole app. Runs stay in
    `${CLAUDE_PLUGIN_DATA}/runs`, are pruned after `retentionDays`, and are never copied into a repository.

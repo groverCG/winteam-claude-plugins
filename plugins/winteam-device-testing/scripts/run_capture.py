@@ -6,7 +6,8 @@ switch to the Testing environment, log in, visit each requested screen from scre
 screenshot and the page source in every requested orientation. Writes manifest.json into a new run folder.
 
 Navigation is read-only: every tap after login goes through guarded_tap, which refuses blockedLabels and,
-on screens of a protected domain, anything outside that domain's allowedTaps.
+on screens of a protected domain, anything outside that domain's allowedTaps. The timeclock domain covers
+only the Time clock page; Punch log and Timekeeping are checked against blockedLabels alone.
 
 Credentials come from the macOS keychain item "winteam-device-testing" (account = email, password =
 secret), or from WT_TEST_USER / WT_TEST_PASSWORD. They are never printed or written to disk.
@@ -163,19 +164,72 @@ def clear_focused_field(session, element):
         time.sleep(0.5)
 
 
+def usable_band(session):
+    """The (top, bottom) screen band where a tap reaches the page: above the keyboard when it is up."""
+    height = session.window_size()["height"]
+    if session.keyboard_shown():
+        return height * 0.08, height * 0.55
+    return height * 0.08, height * 0.85
+
+
+def in_band(rect, band):
+    return rect["height"] > 0 and rect["y"] >= band[0] and rect["y"] + rect["height"] <= band[1]
+
+
+def scroll_into_view(session, element, name, attempts=4):
+    """Scroll the page until the element sits fully inside the usable band.
+
+    On a phone the B2C page can leave a field below the fold or under the keyboard. XCUITest's own scroll
+    is tried first; a swipe inside the band, toward the element, is the fallback.
+    """
+    width = session.window_size()["width"]
+    for attempt in range(attempts):
+        band = usable_band(session)
+        r = session.rect(element)
+        if in_band(r, band):
+            return
+        if attempt == 0:
+            try:
+                session.execute("mobile: scroll", {"elementId": element, "toVisible": True})
+                time.sleep(0.8)
+                continue
+            except wt_driver.WebDriverError:
+                pass
+        x = int(width / 2)
+        top, bottom = int(band[0] + (band[1] - band[0]) * 0.25), int(band[0] + (band[1] - band[0]) * 0.75)
+        if r["y"] + r["height"] > band[1]:
+            session.swipe(x, bottom, x, top)
+        else:
+            session.swipe(x, top, x, bottom)
+        time.sleep(0.8)
+    if not in_band(session.rect(element), usable_band(session)):
+        raise SystemExit("Could not scroll the {} into view; stopping before typing".format(name))
+
+
+def focus_field(session, element, name, attempts=3):
+    """Scroll the field into view, tap near its right edge so the cursor lands at the end, wait for the keyboard."""
+    for _ in range(attempts):
+        scroll_into_view(session, element, name)
+        r = session.rect(element)
+        session.tap(int(r["x"] + r["width"] - 4), int(r["y"] + r["height"] / 2))
+        time.sleep(1)
+        if session.keyboard_shown():
+            return
+    raise SystemExit("Could not focus the {} (focus problem); stopping before typing".format(name))
+
+
 def log_in(session, app, user, secret):
     """Fill the B2C form through the keyboard only: Tab between fields, Enter to submit.
 
-    Login routine, exempt from guarded_tap: it taps only Log In and the email field. The page keeps
-    earlier input across app launches, and the keyboard toolbar covers the password field on a phone, so
-    fields are cleared before typing and never tapped once the keyboard is up.
+    Login routine, exempt from guarded_tap: it taps only Log In and the email field, and may scroll the
+    sign-in page to bring the email field into view. The page keeps earlier input across app launches, and
+    the keyboard toolbar covers the password field on a phone, so fields are cleared before typing and never
+    tapped once the keyboard is up.
     """
     session.tap_element(session.wait_for(*predicate(app["loginButton"]), timeout=30))
     email = session.wait_for(*predicate(app["b2c"]["emailField"]), timeout=45)
     time.sleep(1.5)
-    r = session.rect(email)
-    session.tap(int(r["x"] + r["width"] - 4), int(r["y"] + r["height"] / 2))
-    time.sleep(1)
+    focus_field(session, email, "email field")
     clear_focused_field(session, email)
     session.type_text(user)
     time.sleep(0.5)
