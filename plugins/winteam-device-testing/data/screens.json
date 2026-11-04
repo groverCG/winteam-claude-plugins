@@ -19,6 +19,44 @@
             "label == 'View my job sites and details'"
           ]
         }
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_home.xml",
+          "WinTeam.Mobile.Android/Resources/layout/view_home_module_button.xml",
+          "WinTeam.Mobile.Android/Resources/layout/fragment_dashboard.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/Home/HomeFragment.cs",
+          "WinTeam.Mobile.Android/Views/Fragments/Home/HomeContentFragment.cs",
+          "WinTeam.Mobile.Android/Views/Reusable/HomeModuleButton.cs",
+          "WinTeam.Mobile.Android/Views/Fragments/Dashboard/DashboardFragment.cs"
+        ],
+        "steps": [],
+        "anchor": {
+          "all": [
+            {
+              "class": "android.widget.ImageButton",
+              "desc": "WinTeam"
+            }
+          ],
+          "any": [
+            {
+              "id": "moduleCaptionTextView",
+              "text": "View my shift details"
+            },
+            {
+              "id": "moduleCaptionTextView",
+              "text": "View tax forms"
+            },
+            {
+              "id": "moduleCaptionTextView",
+              "text": "View time records"
+            },
+            {
+              "id": "moduleCaptionTextView",
+              "text": "View my job sites and details"
+            }
+          ]
+        }
       }
     },
     "schedule": {
@@ -39,6 +77,33 @@
             "type == 'XCUIElementTypeCell'"
           ]
         }
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_my_schedule.xml",
+          "WinTeam.Mobile.Android/Resources/layout/item_my_schedule.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/Schedule/ScheduleFragment.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "moduleTitleTextView",
+              "text": "Schedule"
+            }
+          }
+        ],
+        "anchor": {
+          "any": [
+            {
+              "id": "schedule_date_textView"
+            },
+            {
+              "id": "emptyViewDescriptionTextView",
+              "text": "You have no upcoming schedules to display"
+            }
+          ]
+        }
       }
     },
     "tax-forms": {
@@ -54,6 +119,46 @@
           }
         ],
         "anchor": "type == 'XCUIElementTypeStaticText' AND label == 'View and download documents'"
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_tax_forms.xml",
+          "WinTeam.Mobile.Android/Resources/layout/item_tax_form*.xml",
+          "WinTeam.Mobile.Android/Resources/layout/fragment_pay_landing_page.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/TaxForms/**",
+          "WinTeam.Mobile.Android/Views/Fragments/PayLandingPageFragment.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "moduleTitleTextView",
+              "textMatches": "Pay.*|Benefits|Tax Forms"
+            }
+          },
+          {
+            "action": "tap",
+            "locator": {
+              "id": "taxesCardView"
+            }
+          }
+        ],
+        "anchor": {
+          "all": [
+            {
+              "id": "date_range_AutocompleteTextView"
+            }
+          ],
+          "any": [
+            {
+              "id": "taxName_TextView"
+            },
+            {
+              "id": "emptyViewTitleTextView",
+              "text": "No tax forms"
+            }
+          ]
+        }
       }
     },
     "jobs": {
@@ -75,6 +180,33 @@
           "any": [
             "type == 'XCUIElementTypeSearchField' AND label == 'Search by name or number'",
             "type == 'XCUIElementTypeCell'"
+          ]
+        }
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_job_list.xml",
+          "WinTeam.Mobile.Android/Resources/layout/item_job_list.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/Jobs/JobListFragment.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "moduleTitleTextView",
+              "text": "Jobs"
+            },
+            "settle": 3.0
+          }
+        ],
+        "anchor": {
+          "any": [
+            {
+              "id": "jobSearchView"
+            },
+            {
+              "id": "jobNameTextView"
+            }
           ]
         }
       }
@@ -100,6 +232,41 @@
           }
         ],
         "anchor": "type == 'XCUIElementTypeButton' AND label == 'Clock in'"
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_time_landing.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/TimeLanding/TimeLandingFragment.cs",
+          "WinTeam.Mobile.Android/Resources/layout/fragment_time_clock.xml",
+          "WinTeam.Mobile.Android/Resources/layout/loading_button.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/TimeLanding/Punches/TimeClockFragment.cs",
+          "WinTeam.Mobile.Android/Views/Reusable/LoadingButton.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "time"
+            },
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "locator": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Time clock"
+            },
+            "settle": 3.0,
+            "expect": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Time clock",
+              "selected": true
+            }
+          }
+        ],
+        "anchor": {
+          "id": "primary_suggested_punch_action_MaterialButton"
+        }
       }
     },
     "punch-log": {
@@ -126,6 +293,47 @@
             "type == 'XCUIElementTypeCell' AND visible == 1"
           ]
         }
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_punch_log.xml",
+          "WinTeam.Mobile.Android/Resources/layout/item_punch_log*.xml",
+          "WinTeam.Mobile.Android/Resources/layout/fragment_rejected_punch_list.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/TimeLanding/Punches/PunchLogFragment.cs"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "time"
+            },
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "locator": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Punch log"
+            },
+            "settle": 3.0,
+            "expect": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Punch log",
+              "selected": true
+            }
+          }
+        ],
+        "anchor": {
+          "any": [
+            {
+              "id": "punch_container"
+            },
+            {
+              "id": "emptyViewTitleTextView",
+              "text": "No punches to show"
+            }
+          ]
+        }
       }
     },
     "timekeeping": {
@@ -147,6 +355,50 @@
           }
         ],
         "anchor": "type == 'XCUIElementTypeStaticText' AND label == 'Total hours for this period'"
+      },
+      "android": {
+        "files": [
+          "WinTeam.Mobile.Android/Resources/layout/fragment_timekeeping_records*.xml",
+          "WinTeam.Mobile.Android/Resources/layout/item_timekeeping*.xml",
+          "WinTeam.Mobile.Android/Views/Fragments/TimeLanding/Timekeeping/**"
+        ],
+        "steps": [
+          {
+            "action": "tap",
+            "locator": {
+              "id": "time"
+            },
+            "settle": 3.0
+          },
+          {
+            "action": "tap",
+            "locator": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Timekeeping"
+            },
+            "settle": 3.0,
+            "expect": {
+              "class": "android.widget.LinearLayout",
+              "desc": "Timekeeping",
+              "selected": true
+            }
+          },
+          {
+            "action": "scroll_to",
+            "direction": "horizontal",
+            "within": {
+              "id": "expandedChipsRecyclerView"
+            },
+            "target": {
+              "id": "chipContainer",
+              "text": "Custom dates"
+            }
+          }
+        ],
+        "anchor": {
+          "id": "title_dashboard",
+          "text": "Total hours for this period"
+        }
       }
     }
   }

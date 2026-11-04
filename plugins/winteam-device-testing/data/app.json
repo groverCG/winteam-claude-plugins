@@ -1,25 +1,7 @@
 {
-  "bundleId": "com.workwave.winteam",
   "environment": "Testing",
-  "environmentSwitch": "ta_dev_tools",
-  "loginButton": "type == 'XCUIElementTypeButton' AND name == 'Log In'",
-  "b2c": {
-    "emailField": "type == 'XCUIElementTypeTextField' AND label == 'Email Address'",
-    "passwordField": "type == 'XCUIElementTypeSecureTextField' AND label == 'Password'"
-  },
-  "homeTab": "type == 'XCUIElementTypeButton' AND label == 'Home'",
-  "homeAnchor": {
-    "all": ["type == 'XCUIElementTypeButton' AND name == 'ic menu'"],
-    "any": [
-      "label == 'View my shift details'",
-      "label == 'View tax forms'",
-      "label == 'View time records'",
-      "label == 'View my job sites and details'"
-    ]
-  },
-  "backButton": "type == 'XCUIElementTypeButton' AND name == 'ic back'",
-  "chromeLabels": ["Home", "Time", "ic menu", "ic back"],
-  "loadingLabels": ["Loading"],
+  "tenant": null,
+  "accountPickerTitle": "Choose an account",
   "dismissLabels": ["Not right now", "Not now", "No thanks", "Skip"],
   "alertAcceptLabels": ["OK", "Close", "Got it"],
   "alertDismissLabels": ["Cancel", "Not now", "Not Now", "No", "Don't Allow", "Close", "Dismiss", "Later"],
@@ -32,5 +14,65 @@
   "protectedDomains": {
     "timeclock": { "allowedTaps": ["Time", "Home", "Time clock", "Punch log", "Timekeeping"] }
   },
-  "retentionDays": 3
+  "retentionDays": 3,
+  "ios": {
+    "bundleId": "com.workwave.winteam",
+    "environmentSwitch": "ta_dev_tools",
+    "loginButton": "type == 'XCUIElementTypeButton' AND name == 'Log In'",
+    "b2c": {
+      "emailField": "type == 'XCUIElementTypeTextField' AND label == 'Email Address'",
+      "passwordField": "type == 'XCUIElementTypeSecureTextField' AND label == 'Password'"
+    },
+    "accountPicker": {
+      "title": "type == 'XCUIElementTypeStaticText' AND label == 'Choose an account'",
+      "row": "type == 'XCUIElementTypeStaticText' AND label == '{tenant}'"
+    },
+    "homeTab": "type == 'XCUIElementTypeButton' AND label == 'Home'",
+    "homeAnchor": {
+      "all": ["type == 'XCUIElementTypeButton' AND name == 'ic menu'"],
+      "any": [
+        "label == 'View my shift details'",
+        "label == 'View tax forms'",
+        "label == 'View time records'",
+        "label == 'View my job sites and details'"
+      ]
+    },
+    "backButton": "type == 'XCUIElementTypeButton' AND name == 'ic back'",
+    "chromeLabels": ["Home", "Time", "ic menu", "ic back"],
+    "loadingLabels": ["Loading"]
+  },
+  "android": {
+    "package": "com.workwave.winteam",
+    "environmentSwitch": { "id": "ta_dev_tools" },
+    "environmentSpinner": { "id": "environmentSpinner" },
+    "environmentSubmit": { "id": "btnSave" },
+    "loginButton": { "id": "loadingButton", "in": { "id": "loginButtonLayout" } },
+    "b2c": {
+      "emailField": { "class": "android.widget.EditText", "rawId": "email" },
+      "passwordField": { "class": "android.widget.EditText", "rawId": "password" }
+    },
+    "accountPicker": {
+      "title": { "id": "title_TextView", "text": "Choose an account" },
+      "row": { "id": "account_name_TextView", "text": "{tenant}" },
+      "rows": { "id": "account_name_TextView" }
+    },
+    "homeTab": { "id": "home" },
+    "homeAnchor": {
+      "all": [{ "class": "android.widget.ImageButton", "desc": "WinTeam" }],
+      "any": [
+        { "id": "moduleCaptionTextView", "text": "View my shift details" },
+        { "id": "moduleCaptionTextView", "text": "View tax forms" },
+        { "id": "moduleCaptionTextView", "text": "View time records" },
+        { "id": "moduleCaptionTextView", "text": "View my job sites and details" }
+      ]
+    },
+    "backButton": { "class": "android.widget.ImageButton", "desc": "Navigate up" },
+    "loading": [{ "id": "textView_displayText" }, { "id": "lottieAnimation_animationView" }],
+    "chromeIds": ["toolbar", "bottomNavigationView", "inAppNotificationFrameLayout"],
+    "blockedIds": [
+      "primary_suggested_punch_action_MaterialButton",
+      "secondary_suggested_punch_action_MaterialButton",
+      "more_MaterialButton"
+    ]
+  }
 }

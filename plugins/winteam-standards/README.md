@@ -281,7 +281,8 @@ never opened the Android counterpart. Every value looked plausible, and none of 
 
 Its builds can't prove the sizing, so it ends by listing screens to check on a tablet. With the optional
 [`winteam-device-testing`](../winteam-device-testing/README.md) plugin installed, it hands those screens over
-instead, and the iOS ones get captured and compared on a phone and a tablet simulator.
+instead. The iOS ones get captured and compared on a phone and a tablet simulator, and the Android ones on a
+phone and a tablet emulator.
 
 ## The agents ship in here
 

@@ -1,6 +1,13 @@
 {
   "ios": [
-    { "role": "phone", "name": "iPhone 17", "runtime": "iOS 27.0" },
-    { "role": "tablet", "name": "iPad Pro 13-inch (M5)", "runtime": "iOS 27.0" }
+    { "role": "phone", "name": "iPhone 17", "runtime": "iOS 26.5" },
+    { "role": "tablet", "name": "iPad Pro 13-inch (M5)", "runtime": "iOS 26.5" }
+  ],
+  "android": [
+    { "role": "phone", "avd": "Medium_Phone_API_37.0", "api": 37, "screenSize": "normal" },
+    {
+      "role": "tablet", "avd": "WinTeam_Tablet_API_37.0", "api": 37, "screenSize": "xlarge",
+      "create": { "from": "Medium_Phone_API_37.0", "width": 2560, "height": 1600, "density": 320 }
+    }
   ]
 }

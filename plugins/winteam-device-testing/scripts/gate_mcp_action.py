@@ -4,6 +4,11 @@ A tap or a typed key cannot be tied to a screen or a button from the hook's inpu
 ID or coordinates), so any tool that can change the app's state needs the user's approval. Scrolling and
 asking whether the keyboard is up change nothing, so they pass; a swipe can dismiss or refresh, so it asks.
 Unknown tools, including ones a future appium-mcp version adds, are treated as actions.
+
+The same rules cover Android sessions. select_device with platform "android" only lists or picks an emulator.
+Android-only actions are not on the read lists and must stay off them: appium_mobile_press_key (the back and
+home keys), appium_context "switch", appium_mobile_device_control, appium_app_lifecycle, appium_mobile_file,
+appium_mobile_permissions and appium_driver_settings all ask.
 """
 
 import json
