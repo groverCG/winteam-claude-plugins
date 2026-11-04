@@ -5,7 +5,7 @@ Claude Code plugin marketplace (`winteam`) for the WinTeam mobile app.
 | Plugin | What it does |
 |---|---|
 | [`winteam-standards`](plugins/winteam-standards/README.md) | Code standards (size caps, layering, DI, MVVM, teardown, theming, `AppStrings`) as skills, advisory hooks and audit commands, a `scale-for-tablets` fixer, plus four report-only review agents |
-| [`winteam-device-testing`](plugins/winteam-device-testing/README.md) | Optional. Captures the screens a UI change touched on an iPhone and an iPad simulator, and compares them for sizing and layout problems. Picks up `scale-for-tablets`' visual checks. **Needs setup**: Node, pnpm, Xcode simulators and a Testing account |
+| [`winteam-device-testing`](plugins/winteam-device-testing/README.md) | Optional. Captures the screens a UI change touched on a phone and a tablet (iPhone and iPad simulators, or Android phone and tablet emulators), and compares them for sizing and layout problems. Picks up `scale-for-tablets`' visual checks. **Needs setup**: Node, pnpm, Xcode simulators, the Android SDK and emulator, and a Testing account |
 
 ## Install
 

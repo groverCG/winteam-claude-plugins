@@ -1,7 +1,8 @@
 """Minimal W3C WebDriver client for a local Appium server, standard library only.
 
-Every pointer interaction is sent as a W3C pointer action at screen coordinates. On iOS, element clicks
-are ignored on the B2C sign-in page and on the keyboard toolbar, while coordinate taps work everywhere.
+Works with both the XCUITest (iOS) and UiAutomator2 (Android) drivers. Every pointer interaction is sent as
+a W3C pointer action at screen coordinates. On iOS, element clicks are ignored on the B2C sign-in page and on
+the keyboard toolbar, while coordinate taps work everywhere.
 """
 
 import json
@@ -65,6 +66,18 @@ class Session:
                 return None
             raise
         return value[ELEMENT_KEY]
+
+    def find_all(self, strategy, selector):
+        return [item[ELEMENT_KEY] for item in self._cmd("POST", "/elements", {"using": strategy, "value": selector})
+                or []]
+
+    def find_within(self, element, strategy, selector):
+        """Every match below an element, e.g. the label TextView inside an Android button container."""
+        found = self._cmd("POST", "/element/{}/elements".format(element), {"using": strategy, "value": selector})
+        return [item[ELEMENT_KEY] for item in found or []]
+
+    def displayed(self, element):
+        return self.attribute(element, "displayed") == "true"
 
     def wait_for(self, strategy, selector, timeout=20.0, interval=0.5):
         deadline = time.time() + timeout
@@ -130,6 +143,10 @@ class Session:
         self._cmd("POST", "/actions", {"actions": [
             {"type": "pointer", "id": "finger", "parameters": {"pointerType": "touch"}, "actions": actions}]})
         self._cmd("DELETE", "/actions")
+
+    def back(self):
+        """The system back button (Android)."""
+        self._cmd("POST", "/back", {})
 
     def keyboard_shown(self):
         try:
