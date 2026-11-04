@@ -126,15 +126,18 @@ same-height element can be intentional, so each candidate is confirmed or dismis
 - **Navigation is read-only, and the scripts enforce it.** Every tap after login goes through one check:
   - **`blockedLabels`** (Clock in, Clock out, Start/End break, meal and lunch, Submit, Save, Send, Delete,
     Confirm, Continue, Log out…) are never tapped, whatever the screen map says.
-  - **The TimeClock domain** (Time clock, Punch log, Timekeeping) is navigation-only. On those screens the script
-    may only tap the tabs and page titles. It reads and captures everything else.
+  - **The Time clock page** (the first page of the Time tab, the `timeclock` domain) is navigation-only. On it the
+    script may only tap the tabs and page titles. It reads and captures everything else. The Time tab's other
+    pages, Punch log and Timekeeping, are open to explore, with `blockedLabels` still off-limits.
   - **Alerts** get a known-safe button pressed by name (Cancel, Not now, Don't Allow…), or OK when it's their
     only button. Any other alert stops that screen.
   - A refusal shows up as a `blocked` error in the run's `manifest.json`.
   - The only taps outside this check are the fixed login steps: the environment picker, Log In, and the email
-    field.
+    field. On a phone, the login may also scroll the sign-in page to bring the email field into view above the
+    keyboard.
 - **The Appium MCP tools ask before acting.** A `PreToolUse` hook lets reading tools (page source, find
-  element, screenshot, text, attributes) run freely. Every other tool, including any future one, shows an
+  element, screenshot, text, attributes) run freely, along with scrolling (`appium_gesture` `scroll` and
+  `scroll_to_element`) and the keyboard check (`appium_mobile_keyboard` `is_shown`). Every other tool, including any future one, shows an
   approval prompt warning that it can tap or type anywhere in the app, including Clock in/out and Submit. The
   prompt appears in auto mode too. The hook can't tell which button a tap targets, because it only sees an
   element ID or coordinates, so it asks for every action.

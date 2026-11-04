@@ -1,8 +1,9 @@
-"""PreToolUse gate for this plugin's Appium MCP server: reads run freely, every action asks first.
+"""PreToolUse gate for this plugin's Appium MCP server: reads and scrolls run freely, every action asks first.
 
 A tap or a typed key cannot be tied to a screen or a button from the hook's input (it carries an element
-ID or coordinates), so any tool that can change the app's state needs the user's approval. Unknown tools,
-including ones a future appium-mcp version adds, are treated as actions.
+ID or coordinates), so any tool that can change the app's state needs the user's approval. Scrolling and
+asking whether the keyboard is up change nothing, so they pass; a swipe can dismiss or refresh, so it asks.
+Unknown tools, including ones a future appium-mcp version adds, are treated as actions.
 """
 
 import json
@@ -26,6 +27,8 @@ READ_ONLY_TOOLS = {
 READ_ONLY_ACTIONS = {
     "appium_context": {"list"},
     "appium_alert": {"get_text"},
+    "appium_gesture": {"scroll", "scroll_to_element"},
+    "appium_mobile_keyboard": {"is_shown"},
 }
 WARNING = ("Appium action `{}`: it can tap or type anywhere in the WinTeam app, including Clock in/out and "
            "Submit. Approve only if you meant it.")

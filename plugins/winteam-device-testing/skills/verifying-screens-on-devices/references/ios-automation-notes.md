@@ -26,6 +26,12 @@ or when you change the script.
 
 - It opens in **SFSafariViewController**. Its fields are in the native tree: a `TextField` labelled
   `Email Address` and a `SecureTextField` labelled `Password`.
+- **On a phone the page scrolls, and the email field can sit below the fold or under the keyboard.** A tap
+  on a field outside the visible area lands on nothing, or on the keyboard, and the field never takes focus.
+  Bring the field into view first: try `mobile: scroll` with `elementId` and `toVisible: true`. If that fails,
+  swipe vertically on the page, above the keyboard. Through the MCP, use `appium_gesture` with `scroll` or
+  `scroll_to_element`; these run without an approval prompt. After the tap, confirm the keyboard is up
+  (`mobile: isKeyboardShown`, or `appium_mobile_keyboard` `is_shown`) before typing.
 - **Fill it through the keyboard only.** Tap the email field near its right edge, so the cursor lands at the
   end. Type, press **Tab** to move to the password field, type, then press **Enter** to submit.
   - Don't tap the password field: on a phone the keyboard toolbar covers it, and the tap lands on the toolbar.
@@ -52,7 +58,10 @@ or when you change the script.
 - Pushed screens (Schedule, Tax Forms, Jobs) **hide the tab bar**. Go back with `ic back`, and use the Home tab
   only when it is visible.
 - The dashboard's **Timekeeping row switches to the Time tab**. The Time tab has three pages, `Time clock`,
-  `Punch log` and `Timekeeping`, selected by tapping their titles.
+  `Punch log` and `Timekeeping`, selected by tapping their titles. It opens on `Time clock`.
+- **Only the Time clock page is locked** (the `timeclock` domain). You are on it when the `Time clock` title is
+  selected and a `Clock in` or `Clock out` button shows. There, tap nothing but a tab or a page title. Punch log
+  and Timekeeping are open to explore, except for `blockedLabels`.
 - The iPad tab bar floats at the top (iPadOS 18+), with no `TabBar` element above it.
 - **iPad navigation-bar bug, observed on the build tested:** after leaving a pushed screen, the navigation bar can
   show the wrong items. A pushed screen shows Home's menu and title, or Home shows a back arrow that does

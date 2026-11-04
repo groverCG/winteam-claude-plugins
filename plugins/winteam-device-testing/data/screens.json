@@ -103,7 +103,6 @@
       }
     },
     "punch-log": {
-      "domain": "timeclock",
       "ios": {
         "files": [
           "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Punches/PunchLogView.*",
@@ -130,7 +129,6 @@
       }
     },
     "timekeeping": {
-      "domain": "timeclock",
       "ios": {
         "files": [
           "WinTeam.Mobile.iOS/Views/ViewControllers/TimeLanding/Timesheets/TimekeepingRecordsVC.*",
