@@ -26,6 +26,7 @@ rules stay in one place.
 | Xcode with an **iPhone 17** and an **iPad Pro 13-inch (M5)** simulator on **iOS 26.5** | Xcode > Window > Devices and Simulators. The app crashes at launch on iOS 27.0 until it adopts the UIScene lifecycle. To use other simulators, change `data/devices.json` |
 | The Android SDK with `platform-tools`, `emulator` and the `android-37.0` Google Play arm64 system image, plus Java 21 | Android Studio > SDK Manager. `ANDROID_HOME` defaults to `~/Library/Android/sdk`, and `JAVA_HOME` should be set in `~/.zshrc` |
 | The **`Medium_Phone_API_37.0`** AVD | Android Studio > Device Manager. Setup creates the tablet AVD, `WinTeam_Tablet_API_37.0`, from it |
+| Optional: **scrcpy**, to run on a physical Android phone or tablet instead of its emulator | `brew install scrcpy`, then plug the device in over USB with USB debugging on (see *Physical Android devices*) |
 | Node and pnpm | `brew install node pnpm`. **Don't install pnpm through npm** |
 | A Debug build of WinTeam.Mobile.iOS or WinTeam.Mobile.Android that compiles | The skill builds it and installs it on both devices |
 | A test account in the **Testing** environment, without MFA | See *Test credentials* |
@@ -89,8 +90,10 @@ Step 8.
 
 A run, per platform:
 
-1. builds the app and installs it on the phone and the tablet. On Android, the script boots both emulators
-   headless, installs the APK, and shuts down the emulators it booted at the end;
+1. builds the app and installs it on the phone and the tablet. On Android, each role uses a physical device
+   plugged in over USB when one fits it, mirrored in a scrcpy window, and otherwise boots its emulator with a
+   window. Either way you can watch the run. The script installs the APK, and at the end shuts down the
+   emulators it booted and puts a physical device's settings back;
 2. logs in;
 3. captures each screen;
 4. runs `check_layout.py`;
@@ -121,6 +124,31 @@ navigation (`chromeIds` in `data/app.json`).
 The tree carries **no fonts, colours or clipping**. Those come from the screenshots, which Claude reviews. A
 same-height element can be intentional, so each candidate is confirmed or dismissed against the screenshots.
 
+## Physical Android devices
+
+When a device is plugged in over USB with USB debugging on, a run uses it instead of the emulator for the role its
+size bucket fits: `normal` is the phone, `large` or `xlarge` the tablet (`physicalScreenSizes` in
+`data/devices.json`). A role no plugged-in device fits uses its emulator, so a phone over USB and the tablet
+emulator can run together.
+
+- **You watch it in scrcpy.** The script opens a scrcpy window titled `WinTeam <role>: <model>` and closes it at
+  the end. The window is read-only (`--no-control`): the run drives the device through adb and Appium, and a
+  click or key in the window can't get in its way.
+- **It falls back to the emulator** when scrcpy is missing or its window doesn't open, when the device is locked
+  with a PIN, pattern or password, when its USB debugging prompt hasn't been accepted, or when the APK won't
+  install, for example over a Play Store build signed with another key. The run log says why. It never
+  uninstalls an app.
+- **What it changes, and puts back:** the screen stays on while plugged in, the status bar is in demo mode, and
+  the display is locked to each orientation in turn (`wm fixed-to-user-rotation`, Android 10 and later). At the
+  end it restores the stay-awake, demo-mode and rotation settings it read at the start, and clears logcat. It
+  never shuts the device down.
+- **What stays on the device:** the WinTeam build it installed, signed in to the test account, and Appium's two
+  UiAutomator2 server apps (`io.appium.uiautomator2.server*`). Uninstall them from the device's settings when
+  you're done with it.
+- On some brands, Xiaomi for one, installing over USB needs an extra developer option (*Install via USB*).
+
+`/winteam-device-testing:setup-devices` lists the plugged-in devices and the role each one would fill.
+
 ## Data and safety
 
 - **The password never reaches a log.**
@@ -129,7 +157,8 @@ same-height element can be intentional, so each candidate is confirmed or dismis
   - Nothing else runs an Appium server. The bundled MCP server is never used for logging in.
   - On Android, the UiAutomator2 server on the emulator logs its requests to logcat. The script clears logcat
     right after the sign-in is submitted and again at the end, and the Appium session doesn't collect logcat
-    (`skipLogcatCapture`). Emulators the run booted are shut down, which drops their log buffers.
+    (`skipLogcatCapture`). Emulators the run booted are shut down, which drops their log buffers. A physical
+    device keeps running, with its logcat cleared.
   - The Android sign-in page reports the typed password as plain text in its page source. The script reads only
     its length, and never saves that page.
 - **Screenshots contain account data, and expire.**
@@ -175,7 +204,8 @@ same-height element can be intentional, so each candidate is confirmed or dismis
 - **The Testing environment only.** The script switches each simulator and emulator to Testing and stops if it
   can't. It checks the sign-in form before submitting it.
 - **The Android tablet must be a tablet to the app.** The script reads each emulator's size bucket and refuses
-  to capture on a tablet that doesn't resolve `xlarge`. Such a device would show phone resources, and the
+  to capture on a tablet emulator that doesn't resolve `xlarge`. A physical device is used only for a role its
+  bucket fits. Such a device would show phone resources, and the
   comparison would prove nothing.
 
 ## Why pnpm, and what the settings do

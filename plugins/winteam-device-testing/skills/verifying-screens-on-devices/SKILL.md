@@ -65,11 +65,14 @@ logging off, and stops it.
      `--platform android --apk WinTeam.Mobile.Android/bin/Debug/net10.0-android/com.workwave.winteam-Signed.apk`.
 
    The script prunes expired runs, creates a new run folder and prints its path. On Android it also:
-   - boots the emulators headless;
+   - for each role, uses a plugged-in physical device whose size bucket fits it (`physicalScreenSizes` in
+     `devices.json`), mirrored in a read-only scrcpy window, and otherwise boots the role's emulator with a
+     window (always; an emulator already running headless is restarted with one). It logs the device it used
+     and, when it skipped a physical one, why;
    - checks the tablet resolves the `xlarge` size bucket;
    - installs the APK;
    - clears logcat after the login and at the end;
-   - shuts down the emulators it booted.
+   - shuts down the emulators it booted, and puts a physical device's settings back without shutting it down.
 
    The first iOS session on a simulator builds WebDriverAgent, which takes several minutes, so set a long
    timeout. A screen that fails is recorded in `manifest.json` and the others still run. If the test account
@@ -88,7 +91,7 @@ logging off, and stops it.
    height on both devices on purpose. On Android, a text that is a `values-large` dimen should be about
    22/14 ≈ 1.5× taller on the tablet.
 6. **Clean up.** Shut down the iOS simulators this run booted, with `xcrun simctl shutdown <udid>`. The Android
-   script already shut down its emulators.
+   script already shut down its emulators and restored any physical device. Never shut down a physical device.
 7. **Unmapped screens.** If the user wants one covered, explore it with the `appium-mcp` tools. Read
    `references/automation-notes.md` first. Reading tools run freely; every action prompts the user for
    approval. Then **propose** a `screens.json` entry in the report: id, `files` globs, `steps` and an `anchor`,
