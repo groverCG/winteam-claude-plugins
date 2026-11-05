@@ -1,4 +1,4 @@
-"""Capture WinTeam screens on the phone and tablet simulators (iOS) or emulators (Android).
+"""Capture WinTeam screens on the phone and tablet simulators (iOS), or emulators or physical devices (Android).
 
 Starts its own Appium server with logging off, since Appium logs every typed string, the password
 included. Prunes expired runs, then for each device: boot it, freeze the status bar, start a session,
@@ -6,8 +6,10 @@ switch to the Testing environment, log in, visit each requested screen from scre
 screenshot and the page source in every requested orientation. Writes manifest.json into a new run folder.
 
 One flow serves both platforms; platforms.py holds what differs (locators, alerts, the environment picker,
-screenshots, rotation, device boot). On Android the script also boots the emulators, installs --apk, clears
-logcat after the login and at the end, and shuts down the emulators it booted.
+screenshots, rotation, device boot). On Android, a role uses a plugged-in physical device whose size bucket fits it,
+mirrored in a read-only scrcpy window, and otherwise its emulator, booted with a window. The script installs --apk,
+clears logcat after the login and at the end, shuts down the emulators it booted, and puts a physical device's
+settings back.
 
 Navigation is read-only: every tap after login goes through guarded_tap, which refuses blockedLabels (and on
 Android blockedIds, also when they belong to an ancestor) and, on screens of a protected domain, anything
@@ -602,9 +604,7 @@ def main():
     parser.add_argument("--appium-home", required=True, help="the Appium install from setup-devices")
     parser.add_argument("--screens", required=True, help="comma-separated screen ids, or 'all'")
     parser.add_argument("--platform", choices=["ios", "android"], default="ios")
-    parser.add_argument("--apk", help="Android: install this APK on each emulator before capturing")
-    parser.add_argument("--show", action="store_true",
-                        help="Android: boot the emulators with a window, to watch the run (default: headless)")
+    parser.add_argument("--apk", help="Android: install this APK on each device before capturing")
     parser.add_argument("--tenant", help="tenant to pick on 'Choose an account' (or WT_TEST_TENANT)")
     parser.add_argument("--roles", default="phone,tablet", help="comma-separated device roles")
     parser.add_argument("--orientations", default="portrait,landscape")

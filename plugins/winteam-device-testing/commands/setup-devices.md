@@ -21,7 +21,10 @@ Check that these are available, and print their versions:
 - `adb` and `emulator` from the Android SDK, at `$ANDROID_HOME`, or `~/Library/Android/sdk` when that is unset:
   `"$SDK/platform-tools/adb" version` and `"$SDK/emulator/emulator" -version`.
 
-If one is missing, stop and point to the README's *Prerequisites*. Install `node` and `pnpm` with Homebrew.
+Also report `scrcpy --version` (Homebrew puts it in `/opt/homebrew/bin`). It's optional: without it, Android runs
+use the emulators even when a physical device is plugged in, so a missing scrcpy is a note, not a failure.
+
+If one of the others is missing, stop and point to the README's *Prerequisites*. Install `node` and `pnpm` with Homebrew.
 **Do not install pnpm through npm.** A missing Android SDK, emulator or Java is installed through Android
 Studio. Without them, only iOS works; report this and go on with the iOS checks.
 
@@ -74,7 +77,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/android_devices.py" check --data "${CLAUD
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/android_devices.py" create-avd --data "${CLAUDE_PLUGIN_ROOT}/data" --role tablet
    ```
-3. **Confirm each AVD's size bucket.** This boots the AVD headless (the first boot of a new AVD takes a
+3. **Confirm each AVD's size bucket.** This boots the AVD with a window (the first boot of a new AVD takes a
    minute or two), prints its bucket, and shuts down an emulator it started:
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/android_devices.py" bucket --data "${CLAUDE_PLUGIN_ROOT}/data" --role phone
@@ -82,6 +85,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/android_devices.py" check --data "${CLAUD
    ```
    The phone must read `normal` and the tablet `xlarge`. A tablet in any other bucket doesn't get
    `values-large`, so its captures would prove nothing. Report it as a failure.
+4. **Physical devices.** `check` also lists every device plugged in over USB, with its bucket and the role a
+   run would use it for. Report each one. An `unauthorized` device needs its USB debugging prompt accepted;
+   one that fills no role is ignored by runs. Never install anything on a physical device from setup.
 
 ## Step 6 — Credentials
 
@@ -98,8 +104,8 @@ README's *Test credentials* command for the user to run themselves.
 ## Report
 
 A short table with one row per check, each ok or with the problem: Tools, Appium install, XCUITest driver,
-UiAutomator2 driver, each simulator, each AVD (with its bucket, and "created" if this run created it) and
-Credentials. Then:
+UiAutomator2 driver, each simulator, each AVD (with its bucket, and "created" if this run created it), scrcpy,
+each physical device (with its bucket and role) and Credentials. Then:
 
 - **after the first successful setup:** restart Claude Code so the bundled `appium-mcp` server starts;
 - **otherwise:** the one thing to fix next.

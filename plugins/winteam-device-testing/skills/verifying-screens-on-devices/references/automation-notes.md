@@ -120,11 +120,28 @@ tablet is `WinTeam_Tablet_API_37.0`: 2560×1600 px at 320 dpi, 1280×800 dp, buc
 - **Creating the tablet AVD.** There are no `cmdline-tools`. `android_devices.py create-avd` therefore copies
   the phone AVD's `config.ini` and changes the screen. It never copies disk images, and the emulator builds
   fresh userdata on the first boot.
-- **Booting.** Start the emulator headless with
-  `emulator -avd <name> -port <even port> -no-snapshot-save -no-window -no-audio -no-boot-anim`, then wait for
-  `getprop sys.boot_completed` to read 1. An emulator that is already running is reused and left running.
+- **Booting.** Start the emulator with a window, always, so the run can be watched:
+  `emulator -avd <name> -port <even port> -no-snapshot-save -no-audio -no-boot-anim`, then wait for
+  `getprop sys.boot_completed` to read 1. Never pass `-no-window`. An emulator that is already running with a
+  window is reused and left running; one running headless (its process has `-no-window`, or runs
+  `qemu-system-*-headless`) is shut down and booted again with a window.
 - **Status bar.** SystemUI demo mode (`com.android.systemui.demo`) freezes the clock at 09:41 and shows a full
   battery and full Wi-Fi.
+
+## Physical devices
+
+- **Picking one.** `adb devices` lists them with serials that don't start with `emulator-`. A role takes the
+  first one whose bucket is in its `physicalScreenSizes`; otherwise it boots its emulator.
+- **Watching it.** `scrcpy --serial <serial> --no-control --no-audio --window-title <title>` mirrors the screen
+  read-only. The script sets `ADB` to the SDK's adb so scrcpy and the script never restart each other's adb
+  server, and treats scrcpy exiting within its first seconds as "no window" and falls back to the emulator.
+  `--stay-awake` needs control, so the script keeps the screen on with `svc power stayon usb` instead.
+- **Lock screen.** `input keyevent KEYCODE_WAKEUP` then `wm dismiss-keyguard` clears a lock screen with no PIN.
+  The script reads `dumpsys window` for a showing keyguard or a focused notification shade, and falls back to
+  the emulator if one is left.
+- **Settings it puts back.** `stay_on_while_plugged_in`, `sysui_demo_allowed`, `accelerometer_rotation` and
+  `user_rotation` are read at the start and restored at the end (deleted if they were unset), after
+  `wm fixed-to-user-rotation default`. The device is never shut down.
 
 ## Building and installing
 
@@ -213,6 +230,10 @@ tablet is `WinTeam_Tablet_API_37.0`: 2560×1600 px at 320 dpi, 1280×800 dp, buc
 - `MainActivity` uses `ScreenOrientation.FullSensor`, and auto-rotate is off on the emulators. UiAutomator2's
   `/orientation` fails ("Screen rotation cannot be changed…"). The script turns the emulated device with
   `adb emu rotate` until the display is wider than tall, or the reverse, and never leaves it upside down.
+- adb can't move a physical device's sensor, and `FullSensor` ignores the rotation lock. On a physical device
+  the script runs `wm fixed-to-user-rotation enabled`, which makes the display follow the user rotation whatever
+  the activity asks for (Android 10 and later), then tries `wm user-rotation lock` 0, 1 and 3 until the display
+  has the wanted shape, never 2.
 
 ## Screenshots and page sources
 

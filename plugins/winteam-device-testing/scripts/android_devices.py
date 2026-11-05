@@ -1,7 +1,10 @@
-"""Android emulators for the capture run: find, create, boot, inspect and shut down AVDs. Standard library only.
+"""Android devices for the capture run: emulators (find, create, boot, inspect and shut down AVDs) and physical
+devices plugged in over USB (pick one by size bucket, mirror it with scrcpy, restore its settings). Standard library
+only.
 
 As a CLI it serves setup-devices:
-  android_devices.py check --data <data folder>             report each devices.json AVD, and its bucket if running
+  android_devices.py check --data <data folder>             report each devices.json AVD, and its bucket if running,
+                                                             then each physical device adb sees and the role it fills
   android_devices.py create-avd --data <data folder> --role tablet
                                                              create a missing AVD from its "create" entry
   android_devices.py bucket --data <data folder> --role tablet
@@ -15,9 +18,11 @@ import argparse
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 
 SIZE_BUCKETS = ("small", "normal", "large", "xlarge")
@@ -87,23 +92,39 @@ def port_is_free(port):
             return False
 
 
-def boot(avd, timeout=300, window=False):
-    """Return (serial, booted_by_us). Reuses an emulator already running that AVD; headless unless window."""
+def boot(avd, timeout=300):
+    """Return (serial, booted_by_us). Always with a window, so the run can be watched.
+
+    Reuses an emulator already running that AVD. One running headless (a leftover from an earlier run, or
+    started by hand with -no-window) is shut down and booted again with a window.
+    """
     if avd not in list_avds():
         raise SystemExit("AVD '{}' not found; run /winteam-device-testing:setup-devices".format(avd))
     running = running_emulators()
     if avd in running:
-        wait_for_boot(running[avd], timeout)
-        return running[avd], False
+        if not is_headless(avd):
+            wait_for_boot(running[avd], timeout)
+            return running[avd], False
+        print("{} is running without a window; restarting it with one".format(avd), file=sys.stderr)
+        shutdown(running[avd])
     port = free_console_port()
     command = [tool("emulator"), "-avd", avd, "-port", str(port), "-no-snapshot-save", "-no-audio", "-no-boot-anim"]
-    if not window:
-        command.append("-no-window")
     subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, start_new_session=True)
     serial = "emulator-{}".format(port)
     wait_for_boot(serial, timeout)
     return serial, True
+
+
+def is_headless(avd):
+    """True when the emulator process of this AVD runs with -no-window (it then runs the -headless qemu)."""
+    out = subprocess.run(["ps", "-axo", "args="], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        args = line.split()
+        if "-avd" in args and args.index("-avd") + 1 < len(args) and args[args.index("-avd") + 1] == avd:
+            if "-no-window" in args or os.path.basename(args[0]).endswith("-headless"):
+                return True
+    return False
 
 
 def wait_for_boot(serial, timeout=300):
@@ -122,6 +143,140 @@ def shutdown(serial):
     deadline = time.time() + 60
     while time.time() < deadline and serial in adb(None, "devices"):
         time.sleep(1)
+
+
+# Physical devices
+
+# Device settings a run on a physical device changes, restored at cleanup: (namespace, key).
+PHYSICAL_SETTINGS = (("global", "stay_on_while_plugged_in"), ("global", "sysui_demo_allowed"),
+                     ("system", "accelerometer_rotation"), ("system", "user_rotation"))
+
+
+def physical_devices():
+    """(ready, unusable): the serials of the non-emulator devices adb can drive, and (serial, state) for the others,
+    such as 'unauthorized' (the USB debugging prompt was not accepted) or 'offline'."""
+    ready, unusable = [], []
+    for line in adb(None, "devices").splitlines()[1:]:
+        parts = line.split()
+        if len(parts) >= 2 and not parts[0].startswith("emulator-"):
+            if parts[1] == "device":
+                ready.append(parts[0])
+            else:
+                unusable.append((parts[0], parts[1]))
+    return ready, unusable
+
+
+def model(serial):
+    return adb(serial, "shell", "getprop", "ro.product.model", check=False, timeout=10).strip() or serial
+
+
+def api_level(serial):
+    level = adb(serial, "shell", "getprop", "ro.build.version.sdk", check=False, timeout=10).strip()
+    return int(level) if level.isdigit() else None
+
+
+def is_locked(serial):
+    """True while the lock screen (or the notification shade over it) has the focus."""
+    window = adb(serial, "shell", "dumpsys", "window", check=False, timeout=30)
+    if re.search(r"(mShowingLockscreen|mDreamingLockscreen|isKeyguardShowing|mKeyguardShowing)=true", window):
+        return True
+    focus = re.search(r"mCurrentFocus=Window\{[^}]*\}", window)
+    return bool(focus) and any(name in focus.group(0) for name in ("NotificationShade", "Keyguard", "Bouncer",
+                                                                   " StatusBar"))
+
+
+def wake(serial):
+    """Turn the screen on and dismiss a lock screen that has no PIN, pattern or password."""
+    adb(serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP", check=False, timeout=15)
+    adb(serial, "shell", "wm", "dismiss-keyguard", check=False, timeout=15)
+    time.sleep(1)
+
+
+def save_settings(serial):
+    return {(namespace, key): adb(serial, "shell", "settings", "get", namespace, key, check=False,
+                                  timeout=15).strip()
+            for namespace, key in PHYSICAL_SETTINGS}
+
+
+def restore_settings(serial, saved):
+    """Put back what save_settings read; undo the rotation override first, since it writes user_rotation."""
+    adb(serial, "shell", "wm", "fixed-to-user-rotation", "default", check=False, timeout=15)
+    for (namespace, key), value in saved.items():
+        if value in ("", "null"):
+            adb(serial, "shell", "settings", "delete", namespace, key, check=False, timeout=15)
+        else:
+            adb(serial, "shell", "settings", "put", namespace, key, value, check=False, timeout=15)
+
+
+def keep_awake(serial):
+    """Keep the screen on while plugged into USB; restore_settings puts the user's value back."""
+    adb(serial, "shell", "svc", "power", "stayon", "usb", check=False, timeout=15)
+
+
+def rotate_physical(serial, landscape):
+    """Lock the display to a rotation, never upside down. adb can't move a real sensor, so the display is fixed to
+    the user rotation, which then wins over an activity that follows the sensor (Android 10+)."""
+    current, rotation = display_state(serial)
+    if current == landscape and rotation != 180:
+        return True
+    adb(serial, "shell", "wm", "fixed-to-user-rotation", "enabled", check=False, timeout=15)
+    adb(serial, "shell", "settings", "put", "system", "accelerometer_rotation", "0", check=False, timeout=15)
+    for candidate in ("0", "1", "3"):
+        adb(serial, "shell", "settings", "put", "system", "user_rotation", candidate, check=False, timeout=15)
+        adb(serial, "shell", "wm", "user-rotation", "lock", candidate, check=False, timeout=15)
+        time.sleep(1.5)
+        current, rotation = display_state(serial)
+        if current == landscape and rotation != 180:
+            return True
+    return False
+
+
+def scrcpy_binary():
+    found = shutil.which("scrcpy")
+    if found:
+        return found
+    return next((path for path in ("/opt/homebrew/bin/scrcpy", "/usr/local/bin/scrcpy") if os.path.exists(path)),
+                None)
+
+
+def start_mirror(serial, title, timeout=15):
+    """Open a read-only scrcpy window on the device and return its process. Raises RuntimeError when scrcpy is
+    missing or its window doesn't come up. --no-control keeps a stray click or key in the window from moving the
+    run; scrcpy uses the SDK's adb so the two never restart each other's server."""
+    binary = scrcpy_binary()
+    if binary is None:
+        raise RuntimeError("scrcpy is not installed (brew install scrcpy)")
+    output = tempfile.TemporaryFile()
+    process = subprocess.Popen([binary, "--serial", serial, "--no-control", "--no-audio", "--window-title", title],
+                               env=dict(os.environ, ADB=tool("adb")), stdin=subprocess.DEVNULL, stdout=output,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    deadline, settled = time.time() + timeout, time.time() + 3
+    while time.time() < deadline:
+        if process.poll() is not None:
+            output.seek(0)
+            lines = [line for line in output.read().decode(errors="replace").splitlines() if line.strip()]
+            raise RuntimeError("scrcpy exited: {}".format(" / ".join(lines[-3:]) or "no output"))
+        output.seek(0)
+        shown = b"Texture:" in output.read()
+        if shown or time.time() >= settled:
+            return process
+        time.sleep(0.5)
+    return process
+
+
+def stop_mirror(process):
+    if process is None or process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+
+
+def role_for_bucket(devices, bucket):
+    """The devices.json role whose physicalScreenSizes contains this size bucket, or None."""
+    return next((d["role"] for d in devices if bucket in d.get("physicalScreenSizes", ())), None)
 
 
 def screen_info(serial):
@@ -264,6 +419,16 @@ def main():
                 info = screen_info(running[device["avd"]])
                 state += ", running as {}, bucket {}".format(running[device["avd"]], info["screenSize"])
             print("{}: {} ({})".format(device["role"], device["avd"], state))
+        ready, unusable = physical_devices()
+        for serial in ready:
+            bucket = screen_info(serial)["screenSize"]
+            role = role_for_bucket(devices, bucket)
+            print("physical: {} ({}), bucket {}: {}".format(
+                model(serial), serial, bucket, "used for the {} role".format(role) if role else "fills no role"))
+        for serial, state in unusable:
+            print("physical: {} is {}; accept the USB debugging prompt on the device".format(serial, state))
+        if ready:
+            print("scrcpy: {}".format(scrcpy_binary() or "missing (brew install scrcpy); runs use the emulators"))
         return
     device = next((d for d in devices if d["role"] == args.role), None)
     if device is None:

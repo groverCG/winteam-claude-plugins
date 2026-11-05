@@ -1,5 +1,5 @@
 ---
-description: Capture WinTeam screens on a phone and a tablet (iOS simulators, Android emulators) and compare them for sizing and layout problems
+description: Capture WinTeam screens on a phone and a tablet (iOS simulators; Android emulators, or physical devices over USB) and compare them for sizing and layout problems
 allowed-tools: Bash, Read, Glob, Grep, Skill
 argument-hint: "<screen ids | file paths | --changed | all> [--ios | --android]"
 disable-model-invocation: true

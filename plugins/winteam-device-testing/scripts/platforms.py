@@ -1,4 +1,5 @@
-"""What differs between the iOS simulator and the Android emulator, behind one interface for run_capture.py.
+"""What differs between the iOS simulator and Android (an emulator, or a physical device over USB), behind one
+interface for run_capture.py.
 
 A locator ("spec") in app.json and screens.json is platform-specific:
   iOS      a predicate string, e.g. "type == 'XCUIElementTypeButton' AND label == 'Home'"
@@ -162,28 +163,74 @@ class IosPlatform:
 
 
 class AndroidPlatform:
+    """A physical device whose size bucket fits the role, mirrored in a scrcpy window, when one is plugged in;
+    otherwise the role's emulator, booted with a window. Either way the run can be watched."""
     name = "android"
-    backspace = ""
-    enter = ""
+    backspace = ""
+    enter = ""
 
     def __init__(self, app, device, args):
         self.app, self.device, self.args = app, device, args
         self.package = app["package"]
         self.serial, self.booted, self.activity, self.density = None, False, None, 1.0
+        self.physical, self.mirror, self.saved_settings = False, None, None
 
     # Device lifecycle
 
     def prepare(self):
-        self.serial, self.booted = android_devices.boot(self.device["avd"], window=self.args.show)
+        for serial in self.physical_candidates():
+            try:
+                return self.prepare_physical(serial)
+            except (DeviceError, RuntimeError, subprocess.SubprocessError) as error:
+                self.note("can't use {} ({}): {}; falling back to the emulator".format(
+                    android_devices.model(serial), serial, error))
+                self.release_physical()
+        self.serial, self.booted = android_devices.boot(self.device["avd"])
         info = android_devices.screen_info(self.serial)
-        self.density = info["dpi"] / 160.0
-        report = {"avd": self.device["avd"], "api": self.device.get("api"), "serial": self.serial,
-                  "screenSize": info["screenSize"], "dpi": info["dpi"], "pixels": info["pixels"]}
         expected = self.device.get("screenSize")
         if expected and info["screenSize"] != expected:
             raise DeviceError("{} resolves to the '{}' size bucket, not '{}': its captures would not show the "
                               "resources this role should get".format(self.device["avd"], info["screenSize"],
                                                                       expected))
+        report = {"physical": False, "avd": self.device["avd"], "api": self.device.get("api")}
+        return self.prepare_app(info, report)
+
+    def physical_candidates(self):
+        """Serials of plugged-in devices whose size bucket is one of this role's physicalScreenSizes."""
+        wanted = self.device.get("physicalScreenSizes", ())
+        if not wanted:
+            return []
+        ready, unusable = android_devices.physical_devices()
+        for serial, state in unusable:
+            self.note("{} is {}; unlock it and accept the USB debugging prompt to use it".format(serial, state))
+        matching = []
+        for serial in ready:
+            try:
+                if android_devices.screen_info(serial)["screenSize"] in wanted:
+                    matching.append(serial)
+            except (RuntimeError, subprocess.SubprocessError):
+                continue
+        return matching
+
+    def prepare_physical(self, serial):
+        """Take over a physical device for the run. Raises on anything that rules it out, after which
+        release_physical puts it back as it was."""
+        self.serial, self.physical = serial, True
+        name = android_devices.model(serial)
+        self.saved_settings = android_devices.save_settings(serial)
+        android_devices.wake(serial)
+        if android_devices.is_locked(serial):
+            raise DeviceError("it is locked")
+        android_devices.keep_awake(serial)
+        self.mirror = android_devices.start_mirror(serial, "WinTeam {}: {}".format(self.device["role"], name))
+        info = android_devices.screen_info(serial)
+        report = {"physical": True, "model": name, "api": android_devices.api_level(serial)}
+        return self.prepare_app(info, report)
+
+    def prepare_app(self, info, report):
+        self.density = info["dpi"] / 160.0
+        report.update({"serial": self.serial, "screenSize": info["screenSize"], "dpi": info["dpi"],
+                       "pixels": info["pixels"]})
         if self.args.apk:
             android_devices.install(self.serial, self.args.apk)
             android_devices.adb(self.serial, "shell", "run-as", self.package, "rm", "-rf", "files/.__override__",
@@ -194,14 +241,30 @@ class AndroidPlatform:
         android_devices.freeze_status_bar(self.serial)
         return report
 
+    def note(self, message):
+        print("[{}] {}".format(self.device["role"], message), flush=True)
+
     def describe(self):
+        if self.physical:
+            return "{} ({}, physical, mirrored by scrcpy)".format(android_devices.model(self.serial), self.serial)
         return "{} ({})".format(self.device["avd"], self.serial)
+
+    def release_physical(self):
+        """Undo prepare_physical: demo mode off, the user's settings back, the mirror closed. Never shut down."""
+        if self.serial is not None:
+            android_devices.exit_demo_mode(self.serial)
+            if self.saved_settings is not None:
+                android_devices.restore_settings(self.serial, self.saved_settings)
+        android_devices.stop_mirror(self.mirror)
+        self.serial, self.physical, self.mirror, self.saved_settings = None, False, None, None
 
     def cleanup(self):
         if self.serial is None:
             return
         android_devices.clear_logcat(self.serial)
-        if self.booted:
+        if self.physical:
+            self.release_physical()
+        elif self.booted:
             android_devices.shutdown(self.serial)
         else:
             android_devices.exit_demo_mode(self.serial)
@@ -386,8 +449,10 @@ class AndroidPlatform:
         time.sleep(3)
 
     def set_orientation(self, session, name):
-        """The app's activity follows the sensor, which ignores UiAutomator2's rotation; turn the emulator."""
-        if not android_devices.rotate_to(self.serial, landscape=(name == "landscape")):
+        """The app's activity follows the sensor, which ignores UiAutomator2's rotation: turn the emulator, or fix
+        a physical device's display to a rotation."""
+        rotate = android_devices.rotate_physical if self.physical else android_devices.rotate_to
+        if not rotate(self.serial, landscape=(name == "landscape")):
             raise wt_driver.WebDriverError("orientation", "could not rotate {} to {}".format(self.serial, name))
 
     def screenshot(self, path):
