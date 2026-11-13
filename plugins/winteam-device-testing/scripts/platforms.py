@@ -60,11 +60,15 @@ class IosPlatform:
     def describe(self):
         return "{} ({})".format(self.device["name"], self.udid)
 
-    def cleanup(self):
-        """Simulators stay booted; the skill shuts them down after reviewing."""
+    def cleanup(self, keep=False):
+        """Simulators stay booted; the skill shuts them down after reviewing. Returns whether the app was kept."""
+        return keep and self.udid is not None
+
+    def handle(self):
+        return {"udid": self.udid, "name": self.device["name"]}
 
     def capabilities(self):
-        return {
+        caps = {
             "platformName": "iOS",
             "appium:automationName": "XCUITest",
             "appium:udid": self.udid,
@@ -74,6 +78,11 @@ class IosPlatform:
             "appium:newCommandTimeout": 900,
             "appium:wdaLaunchTimeout": 600000,
         }
+        if self.args.keep_devices:
+            # XCUITest terminates the app when the session ends; a cold start would sign it out before the MCP
+            # takes over. UiAutomator2 leaves it running already under noReset.
+            caps["appium:shouldTerminateApp"] = False
+        return caps
 
     def after_login(self):
         """Nothing on the simulator keeps the typed text."""
@@ -174,6 +183,7 @@ class AndroidPlatform:
         self.package = app["package"]
         self.serial, self.booted, self.activity, self.density = None, False, None, 1.0
         self.physical, self.mirror, self.saved_settings = False, None, None
+        self.kept = None
 
     # Device lifecycle
 
@@ -258,16 +268,26 @@ class AndroidPlatform:
         android_devices.stop_mirror(self.mirror)
         self.serial, self.physical, self.mirror, self.saved_settings = None, False, None, None
 
-    def cleanup(self):
+    def cleanup(self, keep=False):
+        """Clear logcat always. With keep, leave the emulator running (the skill shuts it down after the MCP) and
+        a physical device with its settings put back. Returns whether the device was kept."""
         if self.serial is None:
-            return
+            return False
+        if self.physical:
+            self.kept = {"serial": self.serial, "model": android_devices.model(self.serial), "physical": True}
+        else:
+            self.kept = {"serial": self.serial, "avd": self.device["avd"], "bootedByRun": self.booted}
         android_devices.clear_logcat(self.serial)
         if self.physical:
             self.release_physical()
-        elif self.booted:
+        elif self.booted and not keep:
             android_devices.shutdown(self.serial)
-        else:
+        elif not self.booted:
             android_devices.exit_demo_mode(self.serial)
+        return keep
+
+    def handle(self):
+        return self.kept
 
     def capabilities(self):
         return {

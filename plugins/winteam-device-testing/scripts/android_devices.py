@@ -9,6 +9,9 @@ As a CLI it serves setup-devices:
                                                              create a missing AVD from its "create" entry
   android_devices.py bucket --data <data folder> --role tablet
                                                              boot the AVD if needed, print its size bucket, shut down
+and the verifying skill:
+  android_devices.py shutdown --serial emulator-5554         shut down an emulator run_capture.py --keep-devices left
+                                                             running for the MCP; refuses a physical device
 
 create-avd copies the source AVD's config.ini only, never its disk images: the emulator builds the new AVD's
 userdata from the system image on its first boot. It refuses to touch an AVD that already exists.
@@ -406,10 +409,20 @@ def android_devices(data_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("command", choices=["check", "create-avd", "bucket"])
-    parser.add_argument("--data", required=True, help="folder with devices.json")
+    parser.add_argument("command", choices=["check", "create-avd", "bucket", "shutdown"])
+    parser.add_argument("--data", help="folder with devices.json (every command but shutdown)")
     parser.add_argument("--role", help="device role for create-avd and bucket")
+    parser.add_argument("--serial", help="shutdown: the emulator a run kept for the MCP, e.g. emulator-5554")
     args = parser.parse_args()
+    if args.command == "shutdown":
+        if not (args.serial or "").startswith("emulator-"):
+            raise SystemExit("shutdown takes an emulator serial (emulator-NNNN); a physical device is never shut down")
+        clear_logcat(args.serial)
+        shutdown(args.serial)
+        print("shut down {}".format(args.serial))
+        return
+    if not args.data:
+        parser.error("--data is required for {}".format(args.command))
     devices = android_devices(args.data)
     if args.command == "check":
         avds, running = list_avds(), running_emulators()

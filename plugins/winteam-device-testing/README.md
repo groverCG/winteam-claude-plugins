@@ -97,7 +97,10 @@ A run, per platform:
 2. logs in;
 3. captures each screen;
 4. runs `check_layout.py`;
-5. reports, per screen and orientation, what differs between phone and tablet.
+5. **when a screen can't be reached, switches to the Appium MCP after that one failure** (see *When a screen
+   can't be reached*);
+6. reports, per screen and orientation, what differs between phone and tablet. The report also lists the map
+   gaps it couldn't close, and gives a prompt to paste here when there are local entries worth promoting.
 
 It changes no app code. Runs are kept in `~/.claude/plugins/data/<plugin id>/runs/` for 3 days (see *Data and
 safety*). To delete them sooner:
@@ -169,7 +172,10 @@ emulator can run together.
   - Uninstalling the plugin deletes the whole data folder.
   - Screenshots Claude reviewed are also in Claude Code's local session history (`~/.claude/projects/`), which
     the `cleanupPeriodDays` setting prunes, 30 days by default.
-  - The map grows only with screens a change actually touches. It is never meant to cover the whole app.
+  - The map grows only with screens a change actually touches, the local map included. It is never meant to
+    cover the whole app, and an entry never holds account data.
+  - A screen that fails leaves `<id>-failed.png` and `.xml` in the run folder, under the same retention. Neither
+    is ever taken on the sign-in page.
 - **Navigation is read-only, and the scripts enforce it.** Every tap after login goes through one check:
   - **`blockedLabels`** (Clock in, Clock out, Start/End break, meal and lunch, Submit, Save, Send, Delete,
     Confirm, Continue, Log out…) are never tapped, whatever the screen map says. On Android the check also
@@ -179,6 +185,10 @@ emulator can run together.
   - **The Time clock page** (the first page of the Time tab, the `timeclock` domain) is navigation-only. On it the
     script may only tap the tabs and page titles. It reads and captures everything else. The Time tab's other
     pages, Punch log and Timekeeping, are open to explore, with `blockedLabels` still off-limits.
+    - The script recognises the page on screen, by the domain's `detect` anchor in `data/app.json`: the
+      `Time clock` title together with a punch button.
+    - So the lock holds whatever route got there, a local one included. It doesn't depend on a screen declaring
+      the domain.
   - **Alerts** get a known-safe button pressed by name (Cancel, Not now, Don't Allow…), or OK when it's their
     only button. Any other alert stops that screen.
   - A refusal shows up as a `blocked` error in the run's `manifest.json`.
@@ -227,6 +237,9 @@ the error and decide on purpose.
 
 ## The screen map
 
+The map has two layers. The plugin's `data/screens.json` holds the screens everyone shares. Your own local map, in
+your WinTeam-Mobile checkout, sits on top.
+
 For each platform, `data/screens.json` maps a screen id to three things, in its `ios` and `android` blocks:
 - the source files that render it;
 - the steps that reach it from the dashboard: `tap`, optionally with an `expect`, and `scroll_to`;
@@ -243,8 +256,59 @@ iOS locators are predicate strings. Android locators are resource ids or texts (
 
 The automation lessons behind these are in `skills/verifying-screens-on-devices/references/automation-notes.md`.
 
-To add a screen, ask Claude to explore it. It proposes an entry, and you add it here. Anchor it on content
-(an empty-state text, a field, a cell), never on the navigation bar.
+### The local map
+
+`.claude/winteam-device-testing/screens.local.json`, in your WinTeam-Mobile checkout:
+- **It's yours alone.** Claude makes sure git ignores it. It adds the folder to `.git/info/exclude` and never
+  edits the repo's `.gitignore`.
+- **Claude writes it, after proving the route.** When it finds a route through the MCP, it writes the entry and
+  re-runs the capture for that screen once. It keeps the entry if the capture works and removes it if it
+  doesn't. The report shows the diff.
+- **What it can do:** add screens, and replace a plugin screen's `ios` or `android` block when the app has
+  changed under it. A replaced block keeps the plugin screen's `domain`.
+- **What it can't do: loosen a safety setting.** In `app` it can only add to `dismissLabels`,
+  `alertDismissLabels`, `blockedLabels`, `blockedIds` and the loading locators.
+  - It can't declare a `domain`.
+  - It can't change the accept labels, the protected domains, the environment, the login locators or the
+    retention.
+  - A local file that tries is refused: the run stops and names every problem.
+- `scripts/screen_map.py` merges and validates the two layers. The capture script uses the same code:
+  ```bash
+  python3 <plugin>/scripts/screen_map.py list  --data <plugin>/data       # every screen, and where it comes from
+  python3 <plugin>/scripts/screen_map.py check --data <plugin>/data       # validate the local map
+  python3 <plugin>/scripts/screen_map.py resolve --data <plugin>/data <files…>
+  python3 <plugin>/scripts/screen_map.py upstream --data <plugin>/data --prompt
+  ```
+
+**Getting a local entry to your teammates.** The local map stays on your machine. When it has entries the
+plugin lacks, the report ends with the output of `upstream --prompt`. That's a ready-made prompt: paste it into
+a Claude Code session in this repo and it adds the entries to `data/screens.json` and `data/app.json`, then bumps
+the version. Anchor every entry on content (an empty-state text, a field, a cell), never on the navigation bar.
+The validator refuses an anchor that names only chrome.
+
+### When a screen can't be reached
+
+The script tries a screen once. A screen in an unknown state, a stale element or a stuck navigation gets one
+retry, as before. Then it records where the screen failed and moves on. The failure is in `manifest.json`,
+under `errors.<id>`:
+- `kind`, the `step` and `locator` that failed, and the map layer the route came from;
+- a snapshot of the screen at that moment;
+- `fallback`, set to `mcp` or `report`.
+
+With `--keep-devices`, which the skill always passes, a device with an `mcp` failure stays up, signed in on the
+dashboard. Claude then:
+1. reads the snapshot;
+2. attaches the MCP to the running app, without relaunching it, since a cold start signs out;
+3. finds the real route, and writes it to the local map as above.
+
+It doesn't re-run the script to retry. Some failures never go to the MCP:
+- `blocked` refusals;
+- login failures;
+- device problems.
+
+Some gaps no map can fix: a feature flag, an account with no data, or a screen that needs typed input. Those are
+reported with what would unlock them. At the end, Claude shuts down the emulators it kept, with
+`android_devices.py shutdown --serial <serial>`, and the simulators.
 
 ## Known limitations
 

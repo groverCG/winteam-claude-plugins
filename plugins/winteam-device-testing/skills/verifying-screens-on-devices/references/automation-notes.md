@@ -3,7 +3,38 @@
 `run_capture.py` already follows these notes. They matter when you explore a screen with the `appium-mcp`
 tools, or when you change the script.
 
-Contents: [iOS](#ios) · [Android](#android)
+Contents: [Attaching the MCP to a kept device](#attaching-the-mcp-to-a-kept-device) · [iOS](#ios) ·
+[Android](#android)
+
+# Attaching the MCP to a kept device
+
+`run_capture.py --keep-devices` leaves a device whose screen failed running, with the app signed in on the
+dashboard, and lists it under `kept` in `manifest.json`. The MCP picks up from there.
+
+- **Start the session without an app.** Pass no `appium:bundleId`, `appium:app` or `appium:appPackage`. Then
+  Appium neither launches the app nor closes it at the end. The app logs out on every cold start, and the MCP is
+  never used to sign in, so a session that relaunched it would leave you on the login screen with no way on.
+  - iOS: `select_device` with platform `ios` and the kept simulator, then `appium_session_management` create
+    with `{"appium:udid": "<udid>", "appium:noReset": true}`.
+  - Android: `{"appium:udid": "<serial>", "appium:noReset": true}`.
+- **Why the capture script left the app running.**
+  - XCUITest terminates the app when a session with a `bundleId` ends, unless `shouldTerminateApp` is false,
+    which the script sets under `--keep-devices`.
+  - UiAutomator2 stops it only when `noReset` is off, or when `shouldTerminateApp` is set. The script never
+    sets that.
+- **If the app shows the login screen anyway, stop.** Don't sign in through the MCP. Report the screen as a
+  gap. A capture run with `--keep-devices always` gets a signed-in device again.
+- **The MCP's iOS page source drops `visible` and `accessible`** (`pageSourceExcludedAttributes`). An element in
+  it may be off screen, so check with `appium_find_element` on a predicate with `AND visible == 1` before you
+  build a step on it.
+- **The step the script failed on is the place to start.** The manifest error has `step` and `locator`, and
+  `<id>-failed.png`/`.xml` show the screen at that moment. Replay the steps before it from the dashboard. Taps
+  prompt for approval; scrolling doesn't.
+- **What usually broke:**
+  - a label changed with a copy edit;
+  - a prompt or alert covered the page;
+  - a pager snapped back to its first page;
+  - a row is missing behind a feature flag, which is a gap, not a route to fix.
 
 # iOS
 

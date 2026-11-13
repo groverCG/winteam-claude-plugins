@@ -12,7 +12,24 @@
     "Submit", "Save", "Send", "Resend", "Delete", "Confirm", "Continue", "Log out"
   ],
   "protectedDomains": {
-    "timeclock": { "allowedTaps": ["Time", "Home", "Time clock", "Punch log", "Timekeeping"] }
+    "timeclock": {
+      "allowedTaps": ["Time", "Home", "Time clock", "Punch log", "Timekeeping"],
+      "detect": {
+        "ios": {
+          "all": ["type == 'XCUIElementTypeStaticText' AND label == 'Time clock'"],
+          "any": [
+            "type == 'XCUIElementTypeButton' AND label == 'Clock in'",
+            "type == 'XCUIElementTypeButton' AND label == 'Clock out'"
+          ]
+        },
+        "android": {
+          "all": [
+            { "class": "android.widget.LinearLayout", "desc": "Time clock" },
+            { "id": "primary_suggested_punch_action_MaterialButton" }
+          ]
+        }
+      }
+    }
   },
   "retentionDays": 3,
   "ios": {

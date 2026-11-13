@@ -12,9 +12,16 @@ clears logcat after the login and at the end, shuts down the emulators it booted
 settings back.
 
 Navigation is read-only: every tap after login goes through guarded_tap, which refuses blockedLabels (and on
-Android blockedIds, also when they belong to an ancestor) and, on screens of a protected domain, anything
-outside that domain's allowedTaps. The timeclock domain covers only the Time clock page; Punch log and
-Timekeeping are checked against blockedLabels alone.
+Android blockedIds, also when they belong to an ancestor) and, on a protected domain's page, anything outside
+that domain's allowedTaps. A page is protected when its screen declares the domain, or when the domain's
+`detect` anchor shows, so a route from the developer's local map can't walk past the Time clock page. The
+timeclock domain covers only the Time clock page; Punch log and Timekeeping are checked against blockedLabels
+alone.
+
+The screen map is the plugin's, with the developer's local map on top (screen_map.py). A screen that can't be
+reached fails once, with the step and locator that failed and a snapshot of the screen at that point. Retrying
+is left to the Appium MCP: with --keep-devices, a device with such a failure stays up with the app running and
+signed in on the dashboard (with --keep-devices always, every device does).
 
 Credentials come from the macOS keychain item "winteam-device-testing" (account = email, password =
 secret), or from WT_TEST_USER / WT_TEST_PASSWORD. They are never printed or written to disk.
@@ -32,9 +39,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import platforms  # noqa: E402
 import prune_runs  # noqa: E402
+import screen_map  # noqa: E402
 import wt_driver  # noqa: E402
 
 KEYCHAIN_SERVICE = "winteam-device-testing"
+# Errors worth a look through the Appium MCP: something wasn't where the map said. A "blocked" error is the
+# guard working, and is reported, never explored around.
+MCP_ERRORS = {"timeout", "navigation"} | platforms.GONE_ERRORS
 label_text = platforms.label_text
 
 
@@ -70,9 +81,23 @@ def is_blocked(app, label):
                                for b in app["blockedLabels"])
 
 
+def protected_taps(session, ctx):
+    """The allowedTaps of the protected domain whose page is showing, or None when none is."""
+    for domain in ctx["app"]["protectedDomains"].values():
+        detect = domain.get("detect", {}).get(ctx["platform"].name)
+        if detect and anchor_present(session, ctx, detect):
+            return domain["allowedTaps"]
+    return None
+
+
 def guarded_tap(session, ctx, element, allowed=None):
-    """The single tap point after login: refuse blocked labels and ids, and anything outside `allowed`."""
+    """The single tap point after login: refuse blocked labels and ids, and anything outside `allowed`.
+
+    Without an `allowed` list from the screen's declared domain, a protected page detected on screen supplies one.
+    """
     app, platform = ctx["app"], ctx["platform"]
+    if allowed is None:
+        allowed = protected_taps(session, ctx)
     label, every_label = platform.labels(session, element)
     blocked = next((text for text in every_label if is_blocked(app, text)), None)
     if blocked is not None:
@@ -459,23 +484,39 @@ def run_steps(session, ctx, screen):
     app, platform = ctx["app"], ctx["platform"]
     domain = app["protectedDomains"].get(screen.get("domain", ""))
     allowed = domain["allowedTaps"] if domain else None
-    for step in screen[platform.name]["steps"]:
-        wait_while_loading(session, ctx)
-        if step["action"] == "scroll_to":
-            scroll_to(session, ctx, step)
-            continue
-        spec = step["predicate"] if platform.name == "ios" else step["locator"]
-        if step["action"] != "tap":
-            raise ValueError("unknown step action '{}'".format(step["action"]))
-        for attempt in (1, 2):
-            tap_step(session, ctx, spec, allowed, step.get("timeout", 20))
-            time.sleep(step.get("settle", 2.0))
-            dismiss_prompts(session, ctx)
-            if not step.get("expect") or expected_shows(session, ctx, step["expect"]):
-                break
-            if attempt == 2:
-                raise wt_driver.WebDriverError("timeout", "{} did not show after tapping {}".format(
-                    json.dumps(step["expect"]), json.dumps(spec)))
+    for index, step in enumerate(screen[platform.name]["steps"]):
+        try:
+            run_step(session, ctx, step, allowed)
+        except wt_driver.WebDriverError as error:
+            mark(error, index, step.get("target") if step["action"] == "scroll_to" else
+                 step.get("predicate", step.get("locator")))
+            raise
+
+
+def run_step(session, ctx, step, allowed):
+    platform = ctx["platform"]
+    wait_while_loading(session, ctx)
+    if step["action"] == "scroll_to":
+        scroll_to(session, ctx, step)
+        return
+    spec = step["predicate"] if platform.name == "ios" else step["locator"]
+    if step["action"] != "tap":
+        raise ValueError("unknown step action '{}'".format(step["action"]))
+    for attempt in (1, 2):
+        tap_step(session, ctx, spec, allowed, step.get("timeout", 20))
+        time.sleep(step.get("settle", 2.0))
+        dismiss_prompts(session, ctx)
+        if not step.get("expect") or expected_shows(session, ctx, step["expect"]):
+            break
+        if attempt == 2:
+            raise wt_driver.WebDriverError("timeout", "{} did not show after tapping {}".format(
+                json.dumps(step["expect"]), json.dumps(spec)))
+
+
+def mark(error, step, locator):
+    """Note where a screen failed, once: the innermost failure point wins."""
+    if not hasattr(error, "step"):
+        error.step, error.locator = step, locator
 
 
 def reset_orientation(session, ctx):
@@ -490,7 +531,11 @@ def capture_screen(session, ctx, screen_id, spec, orientations, out_dir):
     platform = ctx["platform"]
     results = {}
     reset_orientation(session, ctx)
-    wait_until_loaded(session, ctx, spec["anchor"])
+    try:
+        wait_until_loaded(session, ctx, spec["anchor"])
+    except wt_driver.WebDriverError as error:
+        mark(error, "anchor", spec["anchor"])
+        raise
     for name in orientations:
         platform.set_orientation(session, name)
         time.sleep(2.0)
@@ -506,6 +551,41 @@ def capture_screen(session, ctx, screen_id, spec, orientations, out_dir):
     return results
 
 
+def error_record(kind, error, source=None):
+    """A manifest error. "fallback" tells the skill what comes next: explore with the MCP, or only report."""
+    record = {"kind": kind, "message": str(error),
+              "fallback": "mcp" if kind in MCP_ERRORS else "report"}
+    if source:
+        record["source"] = source
+    if getattr(error, "step", None) is not None:
+        record["step"], record["locator"] = error.step, error.locator
+    return record
+
+
+def needs_mcp(report):
+    return any(error.get("fallback") == "mcp" for error in report["errors"].values())
+
+
+def on_sign_in_page(session, ctx):
+    """The B2C page: on Android its source holds the typed password, and its screenshot shows the email."""
+    b2c, platform = ctx["app"]["b2c"], ctx["platform"]
+    return any(platform.find(session, spec) is not None for spec in (b2c["emailField"], b2c["passwordField"]))
+
+
+def save_snapshot(session, ctx, out_dir, screen_id):
+    """The screen as it was when a screen failed, for the MCP fallback. Never the sign-in page."""
+    try:
+        if on_sign_in_page(session, ctx):
+            return {"skipped": "the sign-in page is showing"}
+        base = os.path.join(out_dir, "{}-failed".format(screen_id))
+        ctx["platform"].screenshot(base + ".png")
+        with open(base + ".xml", "w") as handle:
+            handle.write(session.source())
+        return {"png": base + ".png", "xml": base + ".xml"}
+    except (wt_driver.WebDriverError, OSError, subprocess.SubprocessError, RuntimeError) as error:
+        return {"skipped": "could not take it: {}".format(error)}
+
+
 def capture_device(args, app, device, screens, user, secret):
     platform = platforms.make(args.platform, app, device, args)
     ctx = {"app": platform.app, "platform": platform, "tenant": resolve_tenant(args, platform.app)}
@@ -513,12 +593,13 @@ def capture_device(args, app, device, screens, user, secret):
     out_dir = os.path.join(args.out, role)
     os.makedirs(out_dir, exist_ok=True)
     report = {"platform": platform.name, "screens": {}, "errors": {}}
+    keep = False
     try:
         log("[{}] preparing {}".format(role, device.get("name") or device.get("avd")))
         try:
             report.update(platform.prepare())
         except platforms.DeviceError as error:
-            report["errors"]["device"] = str(error)
+            report["errors"]["device"] = error_record("device", error)
             log("[{}] {}".format(role, error))
             return report
         report["density"] = platform.density
@@ -526,11 +607,25 @@ def capture_device(args, app, device, screens, user, secret):
         session = wt_driver.Session(args.server, platform.capabilities())
         try:
             capture_screens(args, ctx, session, screens, user, secret, out_dir, report)
+            keep = args.keep_devices == "always" or (args.keep_devices == "on-failure" and needs_mcp(report))
+            if keep:
+                end_on_dashboard(session, ctx, role)
         finally:
             session.quit()
     finally:
-        platform.cleanup()
+        if platform.cleanup(keep=keep):
+            report["kept"] = platform.handle()
+            log("[{}] kept {} running for the MCP, signed in on the dashboard".format(role, platform.handle()))
     return report
+
+
+def end_on_dashboard(session, ctx, role):
+    """Leave a kept device where an MCP session can start: the dashboard, in portrait."""
+    try:
+        reset_orientation(session, ctx)
+        go_home(session, ctx)
+    except wt_driver.WebDriverError as error:
+        log("[{}] could not get back to the dashboard before handing over: {}".format(role, error))
 
 
 def capture_screens(args, ctx, session, screens, user, secret, out_dir, report):
@@ -538,26 +633,35 @@ def capture_screens(args, ctx, session, screens, user, secret, out_dir, report):
     try:
         ensure_logged_in(session, ctx, user, secret, role)
     except wt_driver.WebDriverError as error:
-        report["errors"]["login"] = str(error)
+        report["errors"]["login"] = error_record("login", error)
         log("[{}] could not reach the dashboard: {}".format(role, error))
         return
     for screen_id in args.screens:
         spec = screens[screen_id][platform.name]
+        source = screens[screen_id].get("source", "plugin")
         for attempt in (1, 2):
             try:
-                go_home(session, ctx)
+                try:
+                    go_home(session, ctx)
+                except wt_driver.WebDriverError as error:
+                    mark(error, "go_home", ctx["app"]["homeAnchor"])
+                    raise
                 run_steps(session, ctx, screens[screen_id])
                 report["screens"][screen_id] = capture_screen(session, ctx, screen_id, spec, args.orientations,
                                                               out_dir)
                 log("[{}] captured {}".format(role, screen_id))
                 break
             except wt_driver.WebDriverError as error:
-                reset_orientation(session, ctx)
                 retryable = error.error == "navigation" or error.error in platforms.GONE_ERRORS
                 if not retryable or attempt == 2:
-                    report["errors"][screen_id] = str(error)
-                    log("[{}] could not capture {}: {}".format(role, screen_id, error))
+                    record = error_record(error.error, error, source)
+                    record["snapshot"] = save_snapshot(session, ctx, out_dir, screen_id)
+                    report["errors"][screen_id] = record
+                    reset_orientation(session, ctx)
+                    log("[{}] could not capture {}: {} (next: {})".format(
+                        role, screen_id, error, "the MCP" if record["fallback"] == "mcp" else "report it"))
                     break
+                reset_orientation(session, ctx)
                 if error.error != "navigation":
                     log("[{}] {} changed under a tap; trying {} again".format(role, screen_id, screen_id))
                     continue
@@ -600,6 +704,11 @@ def stop_appium(process):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", required=True, help="folder with app.json, devices.json, screens.json")
+    parser.add_argument("--project", default=screen_map.DEFAULT_PROJECT,
+                        help="folder with the developer's screens.local.json (default: %(default)s)")
+    parser.add_argument("--keep-devices", nargs="?", const="on-failure", choices=["on-failure", "always"],
+                        help="leave a device running with the app signed in on the dashboard, for the MCP: when one "
+                             "of its screens needs the MCP (the default), or always (to explore an unmapped screen)")
     parser.add_argument("--runs", required=True, help="the plugin's runs folder; a new run folder goes inside")
     parser.add_argument("--appium-home", required=True, help="the Appium install from setup-devices")
     parser.add_argument("--screens", required=True, help="comma-separated screen ids, or 'all'")
@@ -612,9 +721,11 @@ def main():
     if args.apk and args.platform != "android":
         parser.error("--apk is for --platform android")
 
-    app = load_json(args.data, "app.json")
+    try:
+        app, screens, local = screen_map.load(args.data, args.project)
+    except screen_map.MapError as error:
+        raise SystemExit(str(error))
     devices = load_json(args.data, "devices.json")[args.platform]
-    screens = load_json(args.data, "screens.json")["screens"]
     mapped = [s for s in screens if args.platform in screens[s]]
     args.screens = mapped if args.screens == "all" else args.screens.split(",")
     unknown = [s for s in args.screens if s not in mapped]
@@ -631,7 +742,10 @@ def main():
     args.out = os.path.join(args.runs, time.strftime("%Y%m%d-%H%M%S"))
     os.makedirs(args.out)
     manifest = {"started": time.strftime("%Y-%m-%dT%H:%M:%S"), "platform": args.platform,
-                "screens": args.screens, "orientations": args.orientations, "devices": {}}
+                "screens": args.screens, "orientations": args.orientations, "localMap": local,
+                "sources": {s: screens[s].get("source", "plugin") for s in args.screens}, "devices": {}}
+    if local:
+        log("using the local map {} on top of the plugin's".format(local))
     process, args.server = start_appium(args.appium_home)
     try:
         for device in devices:
@@ -639,8 +753,15 @@ def main():
                 manifest["devices"][device["role"]] = capture_device(args, app, device, screens, user, secret)
     finally:
         stop_appium(process)
+        kept = {role: report["kept"] for role, report in manifest["devices"].items() if "kept" in report}
+        if kept:
+            manifest["kept"] = kept
         with open(os.path.join(args.out, "manifest.json"), "w") as handle:
             json.dump(manifest, handle, indent=2)
+    for role, report in manifest["devices"].items():
+        for screen_id, error in report["errors"].items():
+            if error.get("fallback") == "mcp":
+                log("needs the MCP: {} on the {} ({})".format(screen_id, role, error["kind"]))
     log("run folder: {}".format(args.out))
 
 
