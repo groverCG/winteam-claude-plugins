@@ -192,7 +192,7 @@ def in_band(rect, band):
     return rect["height"] > 0 and rect["y"] >= band[0] and rect["y"] + rect["height"] <= band[1]
 
 
-def scroll_into_view(session, ctx, element, name, attempts=4):
+def scroll_into_view(session, ctx, element, name, attempts=4, stopping="before typing"):
     """Scroll the page until the element sits fully inside the usable band.
 
     On a phone the B2C page can leave a field below the fold or under the keyboard. The driver's own element
@@ -219,7 +219,7 @@ def scroll_into_view(session, ctx, element, name, attempts=4):
             session.swipe(x, top, x, bottom)
         time.sleep(0.8)
     if not in_band(session.rect(element), usable_band(session)):
-        raise SystemExit("Could not scroll the {} into view; stopping before typing".format(name))
+        raise SystemExit("Could not scroll the {} into view; stopping {}".format(name, stopping))
 
 
 def focus_field(session, ctx, element, name):
@@ -248,13 +248,51 @@ def type_email(session, ctx, user, attempts=3):
     raise SystemExit("The email did not land in the email field (focus problem); stopping before the password")
 
 
+def wait_off_sign_in_page(session, ctx, timeout):
+    """Whether the B2C page went away within `timeout` seconds."""
+    deadline = time.time() + timeout
+    while on_sign_in_page(session, ctx):
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.5)
+    return True
+
+
+def submit_sign_in(session, ctx):
+    """Press Enter. On Android, Enter may not submit and the soft keyboard can cover Sign in (on a tablet
+    especially), so when the page is still showing, hide the keyboard and tap Sign in.
+
+    Login routine, exempt from guarded_tap: the only tap is on b2c.submitButton. Nothing here reads a field or
+    the page source. Any failure stops the run; the login is not retried.
+    """
+    app, platform = ctx["app"], ctx["platform"]
+    session.type_text(platform.enter)
+    if platform.name != "android" or wait_off_sign_in_page(session, ctx, timeout=8):
+        return
+    try:
+        platform.hide_keyboard(session)
+        if not on_sign_in_page(session, ctx):
+            if platform.find(session, app["loginButton"]) is not None:
+                raise SystemExit("Could not submit the sign-in form: hiding the keyboard closed the sign-in page")
+            return
+        button = platform.find_visible(session, app["b2c"]["submitButton"])
+        if button is None:
+            raise SystemExit("Could not submit the sign-in form: the Sign in button is not on screen")
+        scroll_into_view(session, ctx, button, "Sign in button", stopping="without submitting")
+        if not on_sign_in_page(session, ctx):
+            return
+        session.tap_element(button)
+    except wt_driver.WebDriverError as error:
+        raise SystemExit("Could not submit the sign-in form ({})".format(error.error))
+
+
 def log_in(session, ctx, user, secret):
     """Fill the B2C form through the keyboard only: Tab between fields, Enter to submit.
 
-    Login routine, exempt from guarded_tap: it taps only Log In and the email field, and may scroll the
-    sign-in page to bring the email field into view. The page keeps earlier input across app launches, and
-    the keyboard toolbar covers the password field on an iPhone, so fields are cleared before typing and the
-    password field is never tapped.
+    Login routine, exempt from guarded_tap: it taps only Log In, the email field and, on Android when Enter
+    doesn't submit, Sign in. It may scroll the sign-in page to bring the email field or Sign in into view. The
+    page keeps earlier input across app launches, and the keyboard toolbar covers the password field on an
+    iPhone, so fields are cleared before typing and the password field is never tapped.
     """
     app, platform = ctx["app"], ctx["platform"]
     session.tap_element(platform.wait_for(session, app["loginButton"], timeout=30))
@@ -271,8 +309,10 @@ def log_in(session, ctx, user, secret):
     typed_secret = field_value(session, ctx, app["b2c"]["passwordField"]) or ""
     if typed_email != user or len(typed_secret) != len(secret):
         raise SystemExit("Sign-in form was not filled correctly (focus problem); stopping without submitting")
-    session.type_text(platform.enter)
-    platform.after_login()
+    try:
+        submit_sign_in(session, ctx)
+    finally:
+        platform.after_login()
 
 
 def anchor_present(session, ctx, anchor):

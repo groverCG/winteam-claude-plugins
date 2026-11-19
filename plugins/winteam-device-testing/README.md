@@ -196,11 +196,17 @@ emulator can run together.
     - the environment picker;
     - Log In;
     - the email field;
+    - on Android, `Sign in` (`next`) on the sign-in page, when Enter didn't submit the form;
     - the row for the configured tenant on "Choose an account". That row is tapped only while the picker shows,
       never once the dashboard's menu button is visible.
 
     On a phone, the login may also scroll the sign-in page to bring the email field into view above the
     keyboard.
+
+    Enter may not submit the form on Android, where the soft keyboard can cover `Sign in`, on a tablet
+    especially. When the form is still showing after Enter, the script hides the keyboard (`hideKeyboard`, then
+    BACK only if the keyboard is still up) and taps `Sign in`. If that fails, the run stops with "Could not
+    submit the sign-in form", without retrying the login. The Appium MCP never signs in.
   - `scroll_to` steps only swipe, leftward or upward, so they can't tap or pull to refresh.
 - **The Appium MCP navigates freely, and asks before protected buttons.**
   - A tap only carries an element ID or coordinates, and the MCP runs its drivers inside itself, so a hook can't

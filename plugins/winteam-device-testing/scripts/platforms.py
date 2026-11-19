@@ -308,6 +308,25 @@ class AndroidPlatform:
         """The UiAutomator2 server logs requests to logcat, typed text included."""
         android_devices.clear_logcat(self.serial)
 
+    def hide_keyboard(self, session):
+        """Hide the soft keyboard so it no longer covers Sign in: hideKeyboard first, BACK only if it stays up.
+
+        BACK with no keyboard up would close the sign-in page, hence the checks before each step.
+        """
+        if not session.keyboard_shown():
+            return
+        try:
+            session.execute("mobile: hideKeyboard")
+        except wt_driver.WebDriverError:
+            pass
+        time.sleep(0.8)
+        if not session.keyboard_shown():
+            return
+        session.execute("mobile: pressKey", {"keycode": 4})
+        time.sleep(0.8)
+        if session.keyboard_shown():
+            raise wt_driver.WebDriverError("keyboard", "the soft keyboard stayed up")
+
     # Locating
 
     def selector(self, spec):

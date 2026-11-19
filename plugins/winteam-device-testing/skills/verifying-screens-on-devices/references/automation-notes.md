@@ -223,6 +223,17 @@ tablet is `WinTeam_Tablet_API_37.0`: 2560×1600 px at 320 dpi, 1280×800 dp, buc
   - Backspace is ``. UiAutomator2 refuses `\b`.
   - Enter is ``.
   - Element clear works only on the focused field, so clear with Backspaces from the end, as on iOS.
+- **Submitting:** Enter may not submit on Android, and on a tablet especially the soft keyboard covers `Sign in`.
+  The script presses Enter, and if the form is still showing after a few seconds:
+  1. it hides the keyboard with `mobile: hideKeyboard`, and with BACK (`mobile: pressKey`, keycode 4) only if
+     the keyboard is still up. BACK with no keyboard up closes the sign-in page, so each step checks first;
+  2. it finds `Button` `next`, scrolls it into view and taps it. That is the only tap on this page.
+
+  If either step fails, the run stops with "Could not submit the sign-in form". The login is not retried, and
+  logcat is still cleared.
+- **The MCP still never signs in,** on this page or any other. If a device shows it, report the gap. Don't hide
+  the keyboard or tap `Sign in` through the MCP: typed text reaches its Appium log, and the page source would
+  put the password in the transcript.
 - **The password field's `text` attribute is the plain password**, not bullets. The script compares only its
   length, and never prints it or saves this page's source. Don't read that attribute through the MCP.
 - The UiAutomator2 server on the device logs requests to logcat, typed text included. `run_capture.py` runs
