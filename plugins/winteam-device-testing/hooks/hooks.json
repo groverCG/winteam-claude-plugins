@@ -17,7 +17,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/gate_mcp_action.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/gate_mcp_action.py\" gate --data \"${CLAUDE_PLUGIN_ROOT}/data\" --state \"${CLAUDE_PLUGIN_DATA}/mcp-elements.json\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__plugin_winteam-device-testing_appium-mcp__appium_find_elements?",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/gate_mcp_action.py\" record --state \"${CLAUDE_PLUGIN_DATA}/mcp-elements.json\"",
             "timeout": 10
           }
         ]

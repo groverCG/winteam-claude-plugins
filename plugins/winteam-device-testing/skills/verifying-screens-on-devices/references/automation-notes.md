@@ -28,8 +28,9 @@ dashboard, and lists it under `kept` in `manifest.json`. The MCP picks up from t
   it may be off screen, so check with `appium_find_element` on a predicate with `AND visible == 1` before you
   build a step on it.
 - **The step the script failed on is the place to start.** The manifest error has `step` and `locator`, and
-  `<id>-failed.png`/`.xml` show the screen at that moment. Replay the steps before it from the dashboard. Taps
-  prompt for approval; scrolling doesn't.
+  `<id>-failed.png`/`.xml` show the screen at that moment. Replay the steps before it from the dashboard. Find
+  each element first and tap its `elementUUID`: such a tap runs without a prompt unless it names a punch button
+  or a `blockedLabels` button. A coordinate tap always prompts, and scrolling never does.
 - **What usually broke:**
   - a label changed with a copy edit;
   - a prompt or alert covered the page;

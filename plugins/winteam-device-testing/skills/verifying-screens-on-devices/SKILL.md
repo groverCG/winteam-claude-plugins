@@ -5,9 +5,9 @@ description: >-
   a screen on a phone and a tablet (iPhone and iPad, or Android phone and tablet), to capture it on both form
   factors and compare the two.
 when_to_use: >-
-  Applies even mid-execution of an already-approved plan that names the file, class or method shapes —
-  an approved plan is not an exemption. Applies whichever tool writes the file: Write, Edit, a Bash
-  heredoc, `sed -i`, or an MCP server's own file-creation call.
+  Applies even when the build passed, when the change looks too small to show, and mid-execution of an
+  already-approved plan, such as Step 8 of /winteam-standards:scale-for-tablets — an approved plan is not an
+  exemption. Not for logic-only changes with no visible effect.
 ---
 
 # A build proves the markup compiles, not that the screen fits
@@ -129,14 +129,27 @@ validates the two, and the capture script uses the same merge. The format is at 
      first, and its *Attaching the MCP to a kept device*. The app is signed in and on the dashboard. Start the
      session **without an app** (no `bundleId`/`appPackage`), so Appium neither relaunches nor closes it: a
      cold start signs out, and the MCP never signs in.
-   - **What runs without asking:** reading tools and scrolling. Every tap prompts the user, and Rule 4 applies
-     to each one.
+   - **Find, then tap by element.** Locate each target with `appium_find_element` (or `appium_find_elements`)
+     on its id, label or text, then tap with `appium_gesture` `tap` and that `elementUUID`. Never tap by
+     coordinates. A hook records what each element was found with, so these run without asking:
+     - reads, scrolls, swipes, the back gesture and Android's `BACK` key;
+     - a tap on a found element, unless its selector names a protected button.
+
+     A prompt means the tap would hit a protected button or the hook can't tell what it hits:
+     - the Time clock punch buttons (primary, secondary and `More`), or a `blockedLabels` button;
+     - a coordinate tap, an element not found first, or a selector that names nothing (a class, a position, a
+       pattern or a parent);
+     - typing, accepting an alert, and app or device control.
+
+     Don't approve your way past a protected button. Its prompt means the route ends there: report it as
+     `blocked`. Rule 4 applies to every tap.
    - **Find the real route and an anchor on content.** For an overlay `dismiss_prompts` doesn't know, note its
      secondary button. It goes in `dismissLabels`, or `alertDismissLabels` for a system alert, and never in an
      accept list.
    - **A gap no map can fix:** stop exploring that screen and report it in step 8. That covers a feature flag,
      an account with no data, and a screen that needs typed input.
-   - **Write, verify, keep or revert.**
+   - **Write, verify, keep or revert. Every route found through the MCP goes into the local map in this
+     session,** so the next session runs it from the script instead of exploring again.
      1. Make sure the local map is ignored. If `git check-ignore -q .claude/winteam-device-testing/` fails,
         append `.claude/winteam-device-testing/` to `.git/info/exclude`. Never edit the repo's `.gitignore`.
      2. Write the entry into `.claude/winteam-device-testing/screens.local.json`, creating the file as
@@ -200,10 +213,10 @@ validates the two, and the capture script uses the same merge. The format is at 
    - It never accepts an alert, except a lone `OK`.
 
    A `blocked` error in `manifest.json` means this protection worked. Report it, and never work around it.
-   Through the MCP, ask before every action, including Android's back key (`appium_mobile_press_key`). On the
-   Time clock page, tap only a tab or a page title (`Punch log`, `Timekeeping`, `Home`), never anything else on
-   that page. On Punch log and Timekeeping you may tap rows, cells and filters to explore, but never a
-   `blockedLabels` button. Scrolling runs without a prompt.
+   Through the MCP, navigate freely by found element (step 6), but never tap the Time clock punch buttons
+   (primary, secondary and `More`) or a `blockedLabels` button anywhere. The hook asks before those, and before
+   coordinate taps, typing and app or device control. Everything else on the Time clock page, Punch log and
+   Timekeeping (tabs, page titles, rows, cells, filters) is open to explore.
 5. **Map only what changed.** Screenshots and page sources contain account data: names, jobs, tax forms. Add a
    screen to the local map when a change touches it, never to cover the whole app. Never put account data in
    an entry: no names, job sites, amounts or dates as locators. Runs stay in `${CLAUDE_PLUGIN_DATA}/runs`, are

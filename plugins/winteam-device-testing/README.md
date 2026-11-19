@@ -202,15 +202,27 @@ emulator can run together.
     On a phone, the login may also scroll the sign-in page to bring the email field into view above the
     keyboard.
   - `scroll_to` steps only swipe, leftward or upward, so they can't tap or pull to refresh.
-- **The Appium MCP tools ask before acting.**
-  - A `PreToolUse` hook lets these run freely: the reading tools (page source, find element, screenshot,
-    text, attributes, `select_device`), scrolling (`appium_gesture` `scroll` and `scroll_to_element`) and the
-    keyboard check (`appium_mobile_keyboard` `is_shown`).
-  - Every other tool, including any future one, shows an approval prompt warning that it can tap or type
-    anywhere in the app, including Clock in/out and Submit. On Android that includes the back and home keys
-    (`appium_mobile_press_key`) and switching contexts. The prompt appears in auto mode too.
-  - The hook can't tell which button a tap targets, because it only sees an element ID or coordinates, so it
-    asks for every action.
+- **The Appium MCP navigates freely, and asks before protected buttons.**
+  - A tap only carries an element ID or coordinates, and the MCP runs its drivers inside itself, so a hook can't
+    ask Appium what an ID is. A `PostToolUse` hook therefore records the strategy and selector each
+    `appium_find_element(s)` call found an element with, in `${CLAUDE_PLUGIN_DATA}/mcp-elements.json`. That file
+    holds selectors only, and entries expire after a day.
+  - The `PreToolUse` hook lets a tap, double tap or long press on a recorded element run freely, unless its
+    selector or attributes name a protected button:
+    - the Time clock punch buttons: the Android `blockedIds` `primary_suggested_punch_action_MaterialButton`,
+      `secondary_suggested_punch_action_MaterialButton` and `more_MaterialButton`, their inner `button_text`
+      and `material_button`, and the label `More`;
+    - any `blockedLabels` button, such as Clock in/out, Submit, Save, Delete or Log out.
+
+    These lists come from `data/app.json` plus the developer's local map, so a local addition counts.
+  - Also free: the reading tools, scrolls, swipes, the back gesture, Android's `BACK` key, rotation, and alert
+    buttons on `alertDismissLabels`.
+  - Everything else shows an approval prompt, in auto mode too:
+    - a protected button;
+    - a coordinate tap;
+    - an element that wasn't found first;
+    - a selector that names nothing (a class, a position, a pattern or a parent);
+    - typing, accepting an alert, app or device control, and any tool a future appium-mcp version adds.
 - **The Testing environment only.** The script switches each simulator and emulator to Testing and stops if it
   can't. It checks the sign-in form before submitting it.
 - **The Android tablet must be a tablet to the app.** The script reads each emulator's size bucket and refuses
