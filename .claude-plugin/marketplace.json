@@ -13,6 +13,10 @@
     {
       "name": "winteam-device-testing",
       "source": "./plugins/winteam-device-testing"
+    },
+    {
+      "name": "winteam-pr-video",
+      "source": "./plugins/winteam-pr-video"
     }
   ]
 }

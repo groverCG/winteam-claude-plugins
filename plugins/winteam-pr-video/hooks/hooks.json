@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/runner/cli.py\" prune --runs \"${CLAUDE_PLUGIN_DATA}/runs\" --quiet",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

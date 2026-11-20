@@ -1,0 +1,5 @@
+[
+  {"pattern": "\"text\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"", "flags": "g", "replacer": "\"text\":\"**REDACTED**\""},
+  {"pattern": "\"value\"\\s*:\\s*\\[[^\\]]*\\]", "flags": "g", "replacer": "\"value\":[\"**REDACTED**\"]"},
+  {"pattern": "(\"type\"\\s*:\\s*\"key(?:Down|Up)\"\\s*,\\s*\"value\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\"", "flags": "g", "replacer": "$1\"*\""}
+]

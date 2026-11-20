@@ -1,0 +1,41 @@
+{
+  "name": "winteam-pr-video",
+  "description": "Records a before/after video of a WinTeam Mobile fix for its pull request. Reads the Jira ticket (through the Atlassian connector when present) and the diff against the PR's base branch, writes a short Python scenario that reproduces the bug, and shows it for approval. Then it builds the base version in a reusable git worktree and the branch version, clean-installs each on the Android emulator or iOS simulator, records the scenario on both, and joins the two into one labelled side-by-side video. After the video it asks before pushing and opening the PR. Reuses winteam-device-testing's pinned Appium install, WebDriver client, login routine, test account and device list, so a teammate who set that plugin up has little left to do. Password safety: the login is the dependency's keyboard-only routine; Appium runs on its own port with typed text redacted from its log and stops after each run; Android logcat is cleared after sign-in; inspect never saves the sign-in page; a recording is deleted when the sign-in form was filled wrong. Runs expire after 7 days. macOS only.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Israel Aguilar"
+  },
+  "keywords": [
+    "winteam",
+    "appium",
+    "video",
+    "pull-request",
+    "ios",
+    "android",
+    "simulator",
+    "emulator"
+  ],
+  "dependencies": [
+    "winteam-device-testing"
+  ],
+  "userConfig": {
+    "worktree_files": {
+      "type": "string",
+      "title": "Untracked files to copy into the base worktree",
+      "description": "Comma-separated paths, relative to the WinTeam-Mobile root, of local files a clean checkout needs to build (for example WinTeam.Mobile.iOS/Directory.Build.props). Leave empty if none.",
+      "default": ""
+    },
+    "android_avd": {
+      "type": "string",
+      "title": "Android emulator (AVD) to record on",
+      "description": "Leave empty to use the phone AVD from winteam-device-testing's devices.json.",
+      "default": ""
+    },
+    "ios_simulator": {
+      "type": "string",
+      "title": "iOS simulator to record on",
+      "description": "Simulator name, for example 'iPhone 17 Pro'. Leave empty to use the phone simulator from winteam-device-testing's devices.json. The runtime always comes from devices.json.",
+      "default": ""
+    }
+  }
+}

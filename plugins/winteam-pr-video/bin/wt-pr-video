@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# The winteam-pr-video command line. Claude Code puts this plugin's bin/ on PATH while it is enabled, so the
+# command name stays the same across plugin versions and one permission rule covers it: Bash(wt-pr-video *).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/local/share/dotnet:$PATH"
+
+DATA="${CLAUDE_PLUGIN_DATA:-}"
+if [ "${1:-}" = --data ]; then DATA="$2"; shift 2; fi
+cmd="${1:-help}"; [ $# -gt 0 ] && shift
+need_data() { [ -n "$DATA" ] || { echo "wt-pr-video: pass --data <plugin data dir> before the command" >&2; exit 1; }; }
+py() { exec python3 "$ROOT/runner/cli.py" "$@"; }
+
+case "$cmd" in
+  new-run)    # new-run <TICKET>: create and print a run folder; expired runs are deleted first
+    need_data
+    [[ "${1:-}" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "usage: wt-pr-video new-run <TICKET>" >&2; exit 1; }
+    python3 "$ROOT/runner/cli.py" prune --runs "$DATA/runs" --quiet
+    run="$DATA/runs/$(date +%Y%m%d-%H%M%S)-$1"; mkdir -p "$run"; echo "$run" ;;
+  base)       need_data; exec bash "$ROOT/scripts/base.sh" "$DATA" "$@" ;;
+  build)      exec bash "$ROOT/scripts/build.sh" "$@" ;;
+  record|inspect|check|doctor) py "$cmd" "$@" ;;
+  prune)      need_data; py prune --runs "$DATA/runs" "$@" ;;
+  sidebyside) exec bash "$ROOT/scripts/sidebyside.sh" "$@" ;;
+  frame)      # frame <video> <seconds> <out.png>
+    exec ffmpeg -v error -y -ss "$2" -i "$1" -frames:v 1 "$3" ;;
+  log)        # log <run-dir>: the errors in the newest Appium log of the run (typed text is redacted there)
+    f="$(ls -t "$1"/appium-*.log 2>/dev/null | head -1)"; [ -n "$f" ] || { echo "no Appium log in $1" >&2; exit 1; }
+    echo "$f"; grep -nE 'Error|error|Failed|failed|Exception' "$f" | grep -v 'log-filters' | tail -25 ;;
+  help|-h|--help)
+    cat <<'USAGE'
+wt-pr-video [--data <dir>] <command>
+  doctor [--add-permission] [--avd X] [--simulator Y]   check this machine
+  new-run <TICKET>                                      create a run folder (prints it)
+  base <repo> <branch|commit> [--copy "a,b"]            check out the base version in the reusable worktree
+  build <android|ios> <source-dir> <dest-dir>           Debug build; prints the .apk/.app path
+  inspect <android|ios> <out-prefix> [--app P] [--do PY] list visible elements + screenshot
+  check <scenario.py>                                   data-changing buttons the scenario names
+  record <android|ios> <app> <scenario.py> <before|after> <out.mp4> [--avd X] [--simulator Y]
+  sidebyside <before.mp4> <after.mp4> <label> <label> <out.mp4>
+  frame <video> <seconds> <out.png>
+  log <run-dir>                                         Appium errors of the newest run log
+  prune [--all] [--days N]                              delete expired runs (default 7 days)
+USAGE
+    ;;
+  *) echo "wt-pr-video: unknown command '$cmd' (try: wt-pr-video help)" >&2; exit 1 ;;
+esac
