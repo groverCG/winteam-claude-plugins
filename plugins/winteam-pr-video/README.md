@@ -109,9 +109,10 @@ The scenario API is in `skills/record/references/scenario-api.md`, with an examp
   - The login is winteam-device-testing's keyboard-only routine, and it refuses to submit a form it filled
     wrong. If it fails during a recorded `run()`, the recording is deleted, since a frame could show the password
     in the email field.
-  - Appium runs on its own port, never shared with winteam-device-testing. It logs to the run folder, with typed
-    text redacted by `runner/appium-log-filters.json`, and it is stopped after every run. The filters also cover
-    single-key typing.
+  - Appium runs on its own port, never shared with winteam-device-testing, and is stopped after every run. It
+    logs to the run folder at info level, so response bodies stay out: the login reads the Android password field
+    back to check its length. `runner/appium-log-filters.json` redacts typed text, single keys included, and any
+    response body that still gets through.
   - Android: logcat is cleared after sign-in and after every run, and the last typed character isn't shown.
   - `inspect` saves nothing while the sign-in page is showing: on Android its element tree holds the typed
     password.

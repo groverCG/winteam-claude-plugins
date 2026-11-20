@@ -92,8 +92,9 @@ def appium_install(dependency_data):
 
 
 def start_appium(dependency_data, log_path):
-    """Our own server on a free port, so we never share one with winteam-device-testing. It logs to log_path,
-    with typed text (the password included) redacted by the log filters. Returns (process, server URL)."""
+    """Our own server on a free port, so we never share one with winteam-device-testing. It logs to log_path at
+    info level, with typed text (the password included) redacted by the log filters. Returns (process, server
+    URL)."""
     import wt_driver
     binary, home = appium_install(dependency_data)
     with socket.socket() as probe:
@@ -111,8 +112,11 @@ def start_appium(dependency_data, log_path):
         java = subprocess.run(["/usr/libexec/java_home"], capture_output=True, text=True)
         if java.returncode == 0:
             env["JAVA_HOME"] = java.stdout.strip()
+    # info, not debug: debug lines carry response bodies, and the login reads the Android password field back
+    # to check its length. Request bodies (info) hold typed text, which the filters redact.
     process = subprocess.Popen([binary, "--address", "127.0.0.1", "--port", str(port), "--log-timestamp",
-                                "--log-no-colors", "--log", log_path, "--log-filters", LOG_FILTERS],
+                                "--log-no-colors", "--log-level", "info", "--log", log_path,
+                                "--log-filters", LOG_FILTERS],
                                env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
     server = "http://127.0.0.1:{}".format(port)
@@ -394,13 +398,20 @@ class Steps:
             self.tap(self.key(digit))
             self.pause(0.3)
 
-    def finish_sign_in(self, timeout=150):
+    def finish_sign_in(self, timeout=150, settle=6):
         """After the sign-in (and the PIN setup, if any): pick the tenant on "Choose an account" and close the
-        app's prompts (the PIN offer with No thanks, notifications with Not right now) until Home loads."""
-        deadline = time.time() + timeout
-        while not self.rc.anchor_present(self.driver, self.ctx, self.app["homeAnchor"]):
-            if not self.rc.choose_account(self.driver, self.ctx):
-                self.rc.dismiss_prompts(self.driver, self.ctx)
+        app's prompts (the PIN offer with No thanks, notifications with Not right now) until Home has stayed up for
+        `settle` seconds. The notifications prompt can open on top of Home after it has loaded."""
+        deadline, home_since = time.time() + timeout, None
+        while True:
+            if self.rc.anchor_present(self.driver, self.ctx, self.app["homeAnchor"]):
+                home_since = home_since or time.time()
+                if time.time() - home_since >= settle:
+                    return
+            else:
+                home_since = None
+                if not self.rc.choose_account(self.driver, self.ctx):
+                    self.rc.dismiss_prompts(self.driver, self.ctx)
             if time.time() >= deadline:
                 raise RuntimeError("Home did not appear after signing in")
             time.sleep(1)
@@ -416,7 +427,8 @@ class Steps:
         self.pause(1)
 
     def log_out(self):
-        """Side menu > Log out, then wait for the login screen."""
+        """Side menu > Log out, then wait for the login screen. Closes a late prompt first."""
+        self.rc.dismiss_prompts(self.driver, self.ctx)
         self.tap(self.app["homeAnchor"]["all"][0])
         self.pause(0.8)
         self.tap(self.text("Log out"))

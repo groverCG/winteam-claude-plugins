@@ -1,5 +1,7 @@
 [
   {"pattern": "\"text\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"", "flags": "g", "replacer": "\"text\":\"**REDACTED**\""},
   {"pattern": "\"value\"\\s*:\\s*\\[[^\\]]*\\]", "flags": "g", "replacer": "\"value\":[\"**REDACTED**\"]"},
-  {"pattern": "(\"type\"\\s*:\\s*\"key(?:Down|Up)\"\\s*,\\s*\"value\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\"", "flags": "g", "replacer": "$1\"*\""}
+  {"pattern": "(\"type\"\\s*:\\s*\"key(?:Down|Up)\"\\s*,\\s*\"value\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\"", "flags": "g", "replacer": "$1\"*\""},
+  {"pattern": "(Got response with status \\d+: ).*", "flags": "g", "replacer": "$1**REDACTED**"},
+  {"pattern": "(Responding to client with driver\\.\\w+\\(\\) result: ).*", "flags": "g", "replacer": "$1**REDACTED**"}
 ]

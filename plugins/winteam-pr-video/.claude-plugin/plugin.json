@@ -1,7 +1,7 @@
 {
   "name": "winteam-pr-video",
   "description": "Records a before/after video of a WinTeam Mobile fix for its pull request. Reads the Jira ticket (through the Atlassian connector when present) and the diff against the PR's base branch, writes a short Python scenario that reproduces the bug, and shows it for approval. Then it builds the base version in a reusable git worktree and the branch version, clean-installs each on the Android emulator or iOS simulator, records the scenario on both, and joins the two into one labelled side-by-side video. After the video it asks before pushing and opening the PR. Reuses winteam-device-testing's pinned Appium install, WebDriver client, login routine, test account and device list, so a teammate who set that plugin up has little left to do. Password safety: the login is the dependency's keyboard-only routine; Appium runs on its own port with typed text redacted from its log and stops after each run; Android logcat is cleared after sign-in; inspect never saves the sign-in page; a recording is deleted when the sign-in form was filled wrong. Runs expire after 7 days. macOS only.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Israel Aguilar"
   },
